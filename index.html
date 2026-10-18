@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>PhotoLex</title>
+
+    <link rel="icon" href="./icon-mark.png" type="image/png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="label-picker.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f5f6f8;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+
+        header {
+            background: white;
+            padding: 18px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .user-area {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #username {
+            font-weight: bold;
+        }
+        /* 共通ボタン */
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            background: #555;
+            box-shadow: 0 2px 6px #0000001a;
+        }
+
+        button:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+
+        button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn {
+            background: #333;
+            color: #fff;
+        }
+
+        .btn:hover {
+            background: #222;
+        }
+
+        .btn-secondary {
+            background: #fff;
+            color: #333;
+            border: 1px solid #d5d5d5;
+        }
+
+        .btn-secondary:hover {
+            background: #f5f5f5;
+        }
+
+        .btn-danger {
+            background: #fff;
+            color: #b33;
+            border: 1px solid #e0b0b0;
+        }
+
+        .btn-danger:hover {
+            background: #fff5f5;
+        }
+
+        .btn-small {
+            padding: 7px 12px;
+            font-size: 13px;
+            border-radius: 7px;
+        }
+        main {
+            width: 90%;
+            max-width: 900px;
+            margin: 30px auto;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .card h2 {
+            margin-top: 0;
+        }
+
+        /* 単語追加フォーム */
+
+        .add-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 10px;
+        }
+
+        .add-form input {
+            padding: 11px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        /* 単語一覧 */
+        #wordArea {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .word-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .word-table th,
+        .word-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .word-table th {
+            background: #f5f5f5;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #777;
+            padding: 30px;
+        }
+
+        #message {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        /* スマホ */
+
+       @media (max-width: 700px) {
+            header {
+                padding: 15px;
+            }
+
+            .user-area {
+                gap: 8px;
+            }
+
+            main {
+                width: 94%;
+            }
+
+            .add-form {
+                grid-template-columns: 1fr;
+            }
+
+            .word-table {
+                font-size: 14px;
+            }
+
+            .word-table th,
+            .word-table td {
+                padding: 8px;
+            }
+        }
+        .photo-help{color:#666;line-height:1.6}.photo-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}#photoPreview{display:none;max-width:100%;max-height:320px;margin:16px 0;border-radius:8px}.review-wrap{overflow-x:auto;margin-top:15px}.review-table{width:100%;border-collapse:collapse;min-width:620px}.review-table th,.review-table td{padding:9px;border-bottom:1px solid #ddd;text-align:left}.review-table input[type=text]{width:100%;padding:9px;border:1px solid #ccc;border-radius:6px;font-size:14px}.review-status{min-height:22px;margin-top:12px}@media(max-width:700px){.photo-controls{align-items:stretch;flex-direction:column}.photo-controls button{width:100%}}
+    </style>
+    <link rel="stylesheet" href="photolex.css">
+</head>
+
+<body>
+
+<header>
+<a class="brand" href="index.html" aria-label="PhotoLex ホーム"><img src="assets/photolex-mark.png" alt=""><span>PhotoLex</span></a>
+
+    <!-- <h1>Your Words, Your Way.</h1> -->
+
+    <nav class="app-nav" aria-label="メインナビゲーション"><a href="index.html" data-page="index.html">ホーム</a><a href="mywords.html" data-page="mywords.html">自分の単語</a><a href="words.html" data-page="words.html">単語帳</a><a href="test_setting.html" data-page="test_setting.html">テスト</a></nav>
+    <div class="user-area">
+        <button id="testStartButton" class="btn">テスト開始</button>
+        <span id="username">読み込み中...</span>
+        <button id="logoutButton" class="btn">ログアウト</button>
+    </div>
+
+</header>
+
+
+<main>
+    <div class="card" id="photoOcrCard">
+        <h2>写真から単語を読み取る</h2>
+        <p class="photo-help">英語と日本語が並んだ写真を選ぶか、スマートフォンで撮影してください。読み取り結果を確認・編集してから、登録する単語を選べます。</p>
+        <div class="photo-controls"><input id="photoInput" type="file" accept="image/*" capture="environment" aria-label="単語の写真を選択"><button id="extractPhotoButton" class="btn" type="button">写真を読み取る</button></div>
+        <img id="photoPreview" alt="選択した写真のプレビュー"><div id="photoReview"></div>
+        <div class="photo-controls" id="photoSaveControls" style="display:none;margin-top:12px"><div class="label-picker"><select id="photoLabelInput" aria-label="写真から追加する単語のラベル"><option value="">ラベルなし</option></select><input id="newPhotoLabelInput" type="text" placeholder="新しいラベル名" style="display:none" aria-label="新しいラベル名"></div><button id="savePhotoWordsButton" class="btn" type="button">選択した単語を追加</button></div>
+        <div id="photoStatus" class="review-status" role="status" aria-live="polite"></div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 単語追加 -->
+    <!-- ============================== -->
+
+    <div class="card">
+
+        <h2>単語を追加</h2>
+
+        <div class="add-form">
+
+            <input
+                type="text"
+                id="englishInput"
+                placeholder="英語"
+            >
+
+            <input
+                type="text"
+                id="japaneseInput"
+                placeholder="日本語"
+            >
+
+            <div class="label-picker">
+                <select id="labelInput" aria-label="既存ラベルを選択">
+                    <option value="">ラベルなし</option>
+                </select>
+                <input id="newLabelInput" type="text" placeholder="新しいラベル名" style="display:none" aria-label="新しいラベル名">
+            </div>
+
+            <button id="addButton" class="btn">
+                追加
+            </button>
+
+        </div>
+
+        <div id="message"></div>
+
+    </div>
+
+
+    <div class="card">
+        <h2>単語帳</h2>
+
+        <p>
+            LEAPなどの単語帳から、自分の単語を追加できます。
+        </p>
+
+        <button id="wordBookButton" class="btn">
+            単語帳を開く
+        </button>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 単語一覧 -->
+    <!-- ============================== -->
+
+
+
+    <div class="card">
+        <h2>単語リストの編集</h2>
+
+        <p>
+            自分で登録した単語を確認・編集できます。
+        </p>
+
+        <button id="myWordsButton" class="btn btn-secondary">
+            自分の単語を見る
+        </button>
+    </div>
+
+</main>
+
+
+<script>
+
+document
+    .getElementById("testStartButton")
+    .addEventListener("click", () => {
+        window.location.href = "test_setting.html";
+    });
+
+document
+    .getElementById("wordBookButton")
+    .addEventListener("click", () => {
+        window.location.href = "words.html";
+    });
+
+document
+    .getElementById("myWordsButton")
+    .addEventListener("click", () => {
+        window.location.href = "mywords.html";
+    });
+
+// ==========================================
+// Supabase設定
+// ==========================================
+
+const SUPABASE_URL =
+    "Supabase_url";
+
+const SUPABASE_ANON_KEY =
+    "●●";
+
+const supabaseClient = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+);
+
+
+// ==========================================
+// HTML要素
+// ==========================================
+
+const usernameElement =
+    document.getElementById("username");
+
+const message =
+    document.getElementById("message");
+
+const englishInput =
+    document.getElementById("englishInput");
+
+const japaneseInput =
+    document.getElementById("japaneseInput");
+
+const labelInput = document.getElementById("labelInput");
+const newLabelInput = document.getElementById("newLabelInput");
+const photoLabelInput = document.getElementById("photoLabelInput");
+const newPhotoLabelInput = document.getElementById("newPhotoLabelInput");
+let userLabels = [];
+PhotoLexLabels.attach(labelInput, newLabelInput);
+PhotoLexLabels.attach(photoLabelInput, newPhotoLabelInput);
+
+const addButton =
+    document.getElementById("addButton");
+
+
+// ==========================================
+// 現在のユーザー情報
+// ==========================================
+
+let currentUserInformation = null;
+
+
+// ==========================================
+// ユーザー情報を取得
+// ==========================================
+
+async function loadUser() {
+
+    // Supabase Authのユーザーを取得
+    const {
+        data: { user },
+        error
+    } = await supabaseClient.auth.getUser();
+
+
+    if (error || !user) {
+
+        window.location.href = "login.html";
+
+        return null;
+    }
+
+
+    // user_informationから自分の情報を取得
+    const {
+        data,
+        error: userInfoError
+    } = await supabaseClient
+        .from("user_information")
+        .select("id, user_name, auth_user_id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+
+    if (userInfoError) {
+
+        console.error(userInfoError);
+
+        message.textContent =
+            "ユーザー情報の取得に失敗しました。";
+
+        return null;
+    }
+
+
+    usernameElement.textContent =
+        data.user_name;
+
+
+    // 後で単語追加に使う
+    currentUserInformation = data;
+
+
+    return data;
+}
+
+async function refreshUserLabels() {
+    if (!currentUserInformation) return false;
+
+    const labels = [];
+    let offset = 0;
+
+    while (true) {
+        const { data, error } = await supabaseClient
+            .from("Words")
+            .select("id,label")
+            .eq("user_id", currentUserInformation.id)
+            .order("id", { ascending: true })
+            .range(offset, offset + 999);
+
+        if (error) {
+            console.error("ユーザーラベルの取得に失敗しました:", error);
+            userLabels = PhotoLexLabels.remembered(currentUserInformation.id);
+            PhotoLexLabels.populate(labelInput, userLabels);
+            PhotoLexLabels.populate(photoLabelInput, userLabels);
+            return false;
+        }
+
+        labels.push(...(data || []).map(row => String(row.label || "").trim()));
+        if (!data || data.length < 1000) break;
+        offset += 1000;
+    }
+
+    userLabels = [...new Set(labels.filter(Boolean))];
+    PhotoLexLabels.remember(userLabels, currentUserInformation.id);
+    PhotoLexLabels.populate(labelInput, userLabels);
+    PhotoLexLabels.populate(photoLabelInput, userLabels);
+    return true;
+}
+
+
+
+// ==========================================
+// 単語を追加
+// ==========================================
+
+addButton.addEventListener("click", async () => {
+
+    const english =
+        englishInput.value.trim();
+
+    const japanese =
+        japaneseInput.value.trim();
+
+    const label = PhotoLexLabels.value(labelInput, newLabelInput);
+    if (labelInput.value === PhotoLexLabels.CREATE_VALUE && !label) {
+        message.textContent = "新しいラベル名を入力してください。";
+        newLabelInput.focus();
+        return;
+    }
+
+
+    // 入力チェック
+    if (english === "") {
+
+        message.textContent =
+            "英語を入力してください。";
+
+        return;
+    }
+
+
+    if (japanese === "") {
+
+        message.textContent =
+            "日本語を入力してください。";
+
+        return;
+    }
+
+
+    if (!currentUserInformation) {
+
+        message.textContent =
+            "ユーザー情報を取得できていません。";
+
+        return;
+    }
+
+
+    // ボタンを無効化
+    addButton.disabled = true;
+    addButton.textContent = "追加中...";
+
+
+    // Wordsに追加
+    const { error } = await supabaseClient
+        .from("Words")
+        .insert({
+            English: english,
+            Japanese: japanese,
+            label: label || null,
+            user_id: currentUserInformation.id
+        });
+
+
+    if (error) {
+
+        console.error(error);
+
+        message.textContent =
+            "単語の追加に失敗しました。";
+
+        addButton.disabled = false;
+        addButton.textContent = "追加";
+
+        return;
+    }
+
+
+    // 入力欄を空にする
+    englishInput.value = "";
+    japaneseInput.value = "";
+    labelInput.value = "";
+    newLabelInput.value = "";
+
+
+    message.textContent =
+        "単語を追加しました。";
+
+
+    // 一覧を更新
+    await refreshUserLabels();
+
+
+    // ボタンを戻す
+    addButton.disabled = false;
+    addButton.textContent = "追加";
+
+});
+
+
+// ==========================================
+// Enterキーでも追加
+// ==========================================
+
+englishInput.addEventListener("keydown", (event) => {
+
+    if (event.key === "Enter") {
+        addButton.click();
+    }
+
+});
+
+japaneseInput.addEventListener("keydown", (event) => {
+
+    if (event.key === "Enter") {
+        addButton.click();
+    }
+
+});
+
+newLabelInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") addButton.click();
+});
+newPhotoLabelInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") savePhotoWordsButton.click();
+});
+labelInput.addEventListener("keydown", (event) => {
+
+    if (event.key === "Enter") {
+        addButton.click();
+    }
+
+});
+
+
+// ==========================================
+// HTMLエスケープ
+// ==========================================
+
+function escapeHtml(value) {
+
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+// Photo OCR uses the authenticated Edge Function; the AI key stays server-side.
+const photoInput = document.getElementById("photoInput"),
+    extractPhotoButton = document.getElementById("extractPhotoButton"),
+    photoPreview = document.getElementById("photoPreview"),
+    photoReview = document.getElementById("photoReview"),
+    photoStatus = document.getElementById("photoStatus"),
+    photoSaveControls = document.getElementById("photoSaveControls"),
+    savePhotoWordsButton = document.getElementById("savePhotoWordsButton");
+
+let extractedPhotoWords = [];
+
+photoInput.addEventListener("change", () => {
+    extractedPhotoWords = [];
+    photoReview.replaceChildren();
+    photoSaveControls.style.display = "none";
+    photoStatus.textContent = "";
+
+    const f = photoInput.files && photoInput.files[0];
+
+    if (!f) {
+        photoPreview.style.display = "none";
+        return;
+    }
+
+    if (!f.type.startsWith("image/")) {
+        photoStatus.textContent = "画像ファイルを選択してください。";
+        photoInput.value = "";
+        return;
+    }
+
+    if (f.size > 8 * 1024 * 1024) {
+        photoStatus.textContent = "画像は8MB以下にしてください。";
+        photoInput.value = "";
+        photoPreview.style.display = "none";
+        return;
+    }
+
+    photoPreview.src = URL.createObjectURL(f);
+    photoPreview.style.display = "block";
+});
+
+extractPhotoButton.addEventListener("click", async () => {
+    const f = photoInput.files && photoInput.files[0];
+
+    if (!f) {
+        photoStatus.textContent = "先に写真を選択してください。";
+        return;
+    }
+
+    if (!currentUserInformation) {
+        photoStatus.textContent = "ログイン情報を取得できていません。";
+        return;
+    }
+
+    extractPhotoButton.disabled = true;
+    extractPhotoButton.textContent = "読み取り中...";
+    photoStatus.textContent = "写真を読み取っています...";
+    photoReview.replaceChildren();
+    photoSaveControls.style.display = "none";
+
+    try {
+        const imageDataUrl = await new Promise((ok, no) => {
+            const r = new FileReader();
+
+            r.onload = () => ok(r.result);
+            r.onerror = () => no(
+                new Error("写真を読み込めませんでした。")
+            );
+
+            r.readAsDataURL(f);
+        });
+
+        const { data, error } =
+            await supabaseClient.functions.invoke(
+                "extract-vocabulary",
+                {
+                    body: { imageDataUrl }
+                }
+            );
+
+        if (error) {
+            let d = error.message || "";
+
+            try {
+                if (error.context && error.context.json) {
+                    const b = await error.context.json();
+                    d = b.error || d;
+                }
+            } catch (_) {}
+
+            throw new Error(
+                d || "読み取りに失敗しました。Edge Functionの設定を確認してください。"
+            );
+        }
+
+        if (!data || !Array.isArray(data.words)) {
+            throw new Error(
+                "読み取り結果の形式が正しくありません。"
+            );
+        }
+
+        extractedPhotoWords = data.words
+            .map(w => ({
+                English: String(w.English || "").trim(),
+                Japanese: String(w.Japanese || "").trim(),
+                selected: true
+            }))
+            .filter(w => w.English && w.Japanese)
+            .slice(0, 100);
+
+        renderPhotoReview();
+
+        photoStatus.textContent = extractedPhotoWords.length
+            ? `${extractedPhotoWords.length}語を読み取りました。内容を確認してください。`
+            : "単語を読み取れませんでした。写真を変えてお試しください。";
+
+        photoSaveControls.style.display =
+            extractedPhotoWords.length ? "flex" : "none";
+
+    } catch (e) {
+        console.error("Photo OCR error:", e);
+
+        photoStatus.textContent =
+            e.message || "読み取りに失敗しました。";
+
+    } finally {
+        extractPhotoButton.disabled = false;
+        extractPhotoButton.textContent = "写真を読み取る";
+    }
+});
+
+function renderPhotoReview() {
+    if (!extractedPhotoWords.length) {
+        photoReview.replaceChildren();
+        return;
+    }
+
+    const table = document.createElement("table");
+    table.className = "review-table";
+
+    const thead = document.createElement("thead");
+    const hr = document.createElement("tr");
+
+    ["追加", "English", "Japanese", "操作"].forEach(t => {
+        const th = document.createElement("th");
+        th.textContent = t;
+        hr.appendChild(th);
+    });
+
+    thead.appendChild(hr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+
+    extractedPhotoWords.forEach((w, i) => {
+        const tr = document.createElement("tr");
+        const cc = document.createElement("td");
+        const cb = document.createElement("input");
+
+        cb.type = "checkbox";
+        cb.checked = w.selected;
+        cb.setAttribute("aria-label", `${i + 1}行目を追加`);
+        cb.addEventListener("change", () => {
+            w.selected = cb.checked;
+        });
+
+        cc.appendChild(cb);
+        tr.appendChild(cc);
+
+        ["English", "Japanese"].forEach(field => {
+            const td = document.createElement("td");
+            const input = document.createElement("input");
+
+            input.type = "text";
+            input.value = w[field];
+
+            input.setAttribute(
+                "aria-label",
+                field === "English" ? "English" : "Japanese"
+            );
+
+            input.addEventListener("input", () => {
+                w[field] = input.value;
+            });
+
+            td.appendChild(input);
+            tr.appendChild(td);
+        });
+
+        const ac = document.createElement("td");
+        const del = document.createElement("button");
+
+        del.type = "button";
+        del.className = "btn-danger btn-small";
+        del.textContent = "削除";
+
+        del.addEventListener("click", () => {
+            extractedPhotoWords.splice(i, 1);
+            renderPhotoReview();
+
+            if (!extractedPhotoWords.length) {
+                photoSaveControls.style.display = "none";
+            }
+        });
+
+        ac.appendChild(del);
+        tr.appendChild(ac);
+        tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+
+    const wrap = document.createElement("div");
+    wrap.className = "review-wrap";
+    wrap.appendChild(table);
+
+    photoReview.replaceChildren(wrap);
+}
+
+savePhotoWordsButton.addEventListener("click", async () => {
+    const words = extractedPhotoWords
+        .filter(w => w.selected)
+        .map(w => ({
+            English: w.English.trim(),
+            Japanese: w.Japanese.trim()
+        }))
+        .filter(w => w.English && w.Japanese);
+
+    if (!words.length) {
+        photoStatus.textContent = "追加する単語を選択してください。";
+        return;
+    }
+
+    if (!currentUserInformation) {
+        photoStatus.textContent = "ユーザー情報を取得できていません。";
+        return;
+    }
+
+    savePhotoWordsButton.disabled = true;
+    savePhotoWordsButton.textContent = "追加中...";
+
+    try {
+        const label = PhotoLexLabels.value(
+            photoLabelInput,
+            newPhotoLabelInput
+        );
+
+        if (
+            photoLabelInput.value === PhotoLexLabels.CREATE_VALUE &&
+            !label
+        ) {
+            throw new Error("新しいラベル名を入力してください。");
+        }
+
+        const { error } = await supabaseClient
+            .from("Words")
+            .insert(
+                words.map(word => ({
+                    English: word.English,
+                    Japanese: word.Japanese,
+                    label: label || null,
+                    user_id: currentUserInformation.id
+                }))
+            );
+
+        if (error) throw error;
+
+        // 単語の保存が成功した後、ラベル一覧の更新に失敗しても、
+        // 単語自体の保存が失敗したように見せない。
+        photoStatus.textContent = `${words.length}語を追加しました。`;
+
+        const labelsLoaded = await refreshUserLabels();
+
+        PhotoLexLabels.populate(
+            photoLabelInput,
+            userLabels,
+            label
+        );
+
+        newPhotoLabelInput.value = "";
+        extractedPhotoWords = [];
+        photoReview.replaceChildren();
+        photoSaveControls.style.display = "none";
+        photoInput.value = "";
+        photoPreview.removeAttribute("src");
+        photoPreview.style.display = "none";
+
+        if (!labelsLoaded) {
+            photoStatus.textContent +=
+                " ラベル一覧の更新に失敗しました。画面を再読み込みしてください。";
+        }
+
+    } catch (e) {
+        console.error("Save photo words error:", e);
+
+        photoStatus.textContent =
+            `単語の追加に失敗しました: ${
+                e.message || "Wordsテーブルの設定を確認してください。"
+            }`;
+
+    } finally {
+        savePhotoWordsButton.disabled = false;
+        savePhotoWordsButton.textContent = "選択した単語を追加";
+    }
+});
+
+// ==========================================
+// ログアウト
+// ==========================================
+
+document
+    .getElementById("logoutButton")
+    .addEventListener("click", async () => {
+
+        const { error } =
+            await supabaseClient.auth.signOut();
+
+
+        if (error) {
+
+            console.error(error);
+
+            message.textContent =
+                "ログアウトに失敗しました。";
+
+            return;
+        }
+
+
+        window.location.href = "login.html";
+
+    });
+
+
+// ==========================================
+// ページ開始
+// ==========================================
+
+async function init() {
+
+    const userInformation =
+        await loadUser();
+
+
+    if (!userInformation) {
+        return;
+    }
+
+    await refreshUserLabels();
+
+}
+
+init();
+
+</script>
+
+<script>document.querySelectorAll(".app-nav a").forEach(a=>{if(a.dataset.page==="index.html"){a.classList.add("active");a.setAttribute("aria-current","page")}});</script>
+</body>
+</html>

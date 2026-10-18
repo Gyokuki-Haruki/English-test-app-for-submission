@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <title>テスト設定 - 単語テスト</title>
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <script src="label-picker.js"></script>
+        <link rel="icon" href="./icon-mark.png" type="image/png">
+        <style>
+        *{box-sizing:border-box}
+        body{margin:0;background:#f5f6f8;font-family:Arial,sans-serif;color:#333}
+        header{background:#fff;padding:18px 30px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+        header h1{margin:0;font-size:22px}
+        .user-area{display:flex;align-items:center;gap:12px}
+        #username{font-weight:bold}
+        button{border:0;border-radius:6px;padding:9px 14px;background:#333;color:#fff;cursor:pointer;font-size:14px}
+        button:hover{background:#555}
+        button:disabled{background:#999;cursor:not-allowed}
+        .secondary{background:#fff;color:#333;border:1px solid #ccc}
+        main{width:94%;max-width:760px;margin:30px auto}
+        .card{background:#fff;padding:25px;border-radius:12px;margin-bottom:20px;box-shadow:0 3px 12px rgba(0,0,0,.06)}
+        .card h2{margin-top:0}
+        .field{margin:20px 0}
+        .field label{display:block;font-weight:bold;margin-bottom:8px}
+        select,input[type=number]{width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;font-size:15px}
+        .range-row{display:flex;gap:10px;align-items:center}
+        .range-row input{flex:1}
+        .radio-group{display:flex;gap:10px;flex-wrap:wrap}
+        .radio-group label{font-weight:normal;display:flex;align-items:center;gap:7px;border:1px solid #d5d5d5;border-radius:8px;padding:10px 14px;cursor:pointer;background:#fff}
+        .radio-group label:has(input:checked){background:#f1f1f1;border-color:#333}
+        .radio-group input{margin:0}
+        .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:25px}
+        .status{color:#666;margin-top:8px}
+        .field-label{font-weight:bold;margin-bottom:8px}
+        .label-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}
+        .label-option{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #d5d5d5;border-radius:8px;background:#fff;cursor:pointer}
+        .label-option input{width:18px;height:18px;margin:0;accent-color:#1769d2}
+        .question-count-control{display:flex;align-items:center;gap:12px}
+        .question-count-control input{flex:1;min-width:0}
+        .question-count-control .status{margin:0;white-space:nowrap}
+        .error{color:#b33}
+        .hidden{display:none}
+        </style>
+        <link rel="stylesheet" href="photolex.css">
+    </head>
+    <body>
+        <header>
+            <a class="brand" href="index.html" aria-label="PhotoLex ホーム">
+                <img src="assets/photolex-mark.png" alt="">
+                <span>PhotoLex</span>
+            </a>
+            <h1>テスト設定</h1>
+            <nav class="app-nav" aria-label="メインナビゲーション">
+                <a href="index.html" data-page="index.html">ホーム</a>
+                <a href="mywords.html" data-page="mywords.html">自分の単語</a>
+                <a href="words.html" data-page="words.html">単語帳</a>
+                <a href="test_setting.html" data-page="test_setting.html">テスト</a>
+            </nav>
+            <div class="user-area">
+                <span id="username">読み込み中...</span>
+                <button id="logoutButton">ログアウト</button>
+            </div>
+        </header>
+        <main>
+            <div class="card">
+                <h2>テストを作る</h2>
+
+                <div class="field" id="sourceField">
+                    <label for="sourceSelect">出題元</label>
+                    <select id="sourceSelect">
+                        <option value="myword">自分の単語</option>
+                        <option value="leap">LEAP</option>
+                        <option value="tekkyo">鉄壁</option>
+                    </select>
+                </div>
+
+                <div class="field" id="labelField">
+                    <div class="field-label">ラベル（複数選択できます）</div>
+                    <div id="labelOptions" class="label-options" role="group" aria-label="出題するラベル"></div>
+                    <div id="labelStatus" class="status"></div>
+                </div>
+
+                <div class="field" id="rangeField">
+                    <label>範囲（単語番号）</label>
+                    <div class="range-row">
+                        <input id="startNumber" type="number" min="1" value="1">
+                        <span>〜</span>
+                        <input id="endNumber" type="number" min="1" value="300" aria-label="範囲の末尾">
+                    </div>
+                    <div id="rangeStatus" class="status">現在はデータベース上の掲載順を使います。</div>
+                </div>
+
+                <div class="field">
+                    <label>出題モード</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="mode" value="random" checked> ランダム
+                        </label>
+                        <label>
+                            <input type="radio" name="mode" value="mistake"> 間違え率優先
+                        </label>
+                    </div>
+                    <div id="modeStatus" class="status">範囲内からランダムに出題します。</div>
+                </div>
+
+                <div class="field">
+                    <label for="questionCount">問題数</label>
+                    <div class="question-count-control">
+                        <input id="questionCount" type="number" min="1" step="1" value="10" aria-label="問題数">
+                        <span id="questionCountMax" class="status">最大 10 問</span>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="backButton" class="secondary">戻る</button>
+                    <button id="startButton">テスト開始</button>
+                </div>
+                <div id="message" class="status"></div>
+            </div>
+        </main>
+<script>
+const SUPABASE_URL="Supabase_url";
+const SUPABASE_ANON_KEY="●●";
+const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const $=id=>document.getElementById(id);
+let currentUserInformation=null;
+let myWords=[];
+let commonWords=[];
+const selectedOnly=new URLSearchParams(location.search).get("selected")==="1";
+let selectedTestWords=[];
+let questionCountInitialized=false;
+
+function norm(x){return x==null?"":String(x).trim()}
+
+function loadSelectedTestWords(){
+    try{
+        const raw=localStorage.getItem("selectedTestWords");
+        if(!raw)return false;
+        const parsed=JSON.parse(raw);
+        if(!Array.isArray(parsed)||!parsed.length)return false;
+        selectedTestWords=parsed.filter(w=>w&&norm(w.English)).map(w=>({
+            id:Number(w.id),
+            English:norm(w.English),
+            Japanese:norm(w.Japanese),
+            label:norm(w.label),
+            word_type:w.word_type==="common"?"common":"myword"
+        }));
+        return selectedTestWords.length>0;
+    }catch(e){
+        console.error(e);
+        return false;
+    }
+}
+
+function setupSelectedOnlyPage(){
+    $("sourceField").classList.add("hidden");
+    $("labelField").classList.add("hidden");
+    $("rangeField").classList.add("hidden");
+    $("rangeField").querySelector("#startNumber").value=1;
+    $("rangeField").querySelector("#endNumber").value=Math.max(1,selectedTestWords.length);
+    $("rangeField").querySelector("#endNumber").max=Math.max(1,selectedTestWords.length);
+    $("rangeStatus").textContent=`選択した単語は${selectedTestWords.length}語です。末尾は語数に合わせています。`;
+    updateQuestionCountLimit(selectedTestWords.length);
+    $("modeStatus").textContent="選択した単語の中から出題します。";
+    $("backButton").onclick=()=>location.href="mywords.html";
+}
+
+async function loadUser(){
+    const {data:{user},error}=await supabaseClient.auth.getUser();
+    if(error||!user){location.href="login.html";return false}
+    const {data,error:e}=await supabaseClient
+        .from("user_information")
+        .select("id,user_name,auth_user_id")
+        .eq("auth_user_id",user.id)
+        .single();
+    if(e){
+        console.error(e);
+        $("message").textContent="ユーザー情報の取得に失敗しました。";
+        return false;
+    }
+    currentUserInformation=data;
+    $("username").textContent=data.user_name;
+    return true;
+}
+
+async function loadMyWords(){
+    let all=[],from=0;
+    while(true){
+        const {data,error}=await supabaseClient
+            .from("Words")
+            .select("id,English,Japanese,label,created_at")
+            .eq("user_id",currentUserInformation.id)
+            .order("id",{ascending:true})
+            .range(from,from+999);
+        if(error){console.error(error);return false}
+        all=all.concat(data||[]);
+        if(!data||data.length<1000)break;
+        from+=1000;
+    }
+    myWords=all;
+    PhotoLexLabels.remember(getMyLabels().filter(Boolean),currentUserInformation.id);
+    return true;
+}
+
+async function loadCommonWords(label){
+    let all=[],from=0;
+    while(true){
+        const {data,error}=await supabaseClient
+            .from("commonwords")
+            .select("id,English,Japanese,label")
+            .eq("label",label)
+            .order("id",{ascending:true})
+            .range(from,from+999);
+        if(error){console.error(error);return false}
+        all=all.concat(data||[]);
+        if(!data||data.length<1000)break;
+        from+=1000;
+    }
+    commonWords=all;
+    return true;
+}
+
+function getMyLabels(){
+    const s=new Set();
+    myWords.forEach(w=>s.add(norm(w.label)));
+    return [...s].sort((a,b)=>{
+        if(a==="")return 1;
+        if(b==="")return -1;
+        return a.localeCompare(b,"ja");
+    });
+}
+
+function getSelectedLabels(){
+    const container=$("labelOptions");
+    const allCheckbox=container.querySelector('[data-label="__ALL__"]');
+    if(!allCheckbox||allCheckbox.checked)return null;
+
+    const selected=[...container.querySelectorAll("input[data-label]:checked")]
+        .map(input=>input.dataset.label)
+        .filter(label=>label!=="__ALL__");
+    return selected.length?selected:null;
+}
+
+function createLabelOption(value,text,checked){
+    const label=document.createElement("label");
+    label.className="label-option";
+    const checkbox=document.createElement("input");
+    checkbox.type="checkbox";
+    checkbox.dataset.label=value;
+    checkbox.checked=checked;
+    const caption=document.createElement("span");
+    caption.textContent=text;
+    label.append(checkbox,caption);
+    return label;
+}
+
+function updateLabels(){
+    const source=$("sourceSelect").value;
+    const labels=source==="myword"?getMyLabels():[source==="leap"?"leap":"tekkyo"];
+    const container=$("labelOptions");
+    container.replaceChildren();
+
+    const allOption=createLabelOption("__ALL__","すべて",true);
+    container.appendChild(allOption);
+    labels.forEach(label=>{
+        const text=label===""?"ラベルなし":
+            source==="leap"?"LEAP":source==="tekkyo"?"鉄壁":label;
+        container.appendChild(createLabelOption(label,text,false));
+    });
+
+    allOption.querySelector("input").addEventListener("change",()=>{
+        if(allOption.querySelector("input").checked){
+            container.querySelectorAll('input[data-label]:not([data-label="__ALL__"])')
+                .forEach(input=>input.checked=false);
+        }else if(!container.querySelector('input[data-label]:checked')){
+            allOption.querySelector("input").checked=true;
+        }
+        updateRangeDefaults();
+    });
+    container.querySelectorAll('input[data-label]:not([data-label="__ALL__"])')
+        .forEach(input=>input.addEventListener("change",()=>{
+            if(input.checked)allOption.querySelector("input").checked=false;
+            if(!container.querySelector('input[data-label]:checked')){
+                allOption.querySelector("input").checked=true;
+            }
+            updateRangeDefaults();
+        }));
+
+    $("labelStatus").textContent=source==="myword"
+        ?"複数のラベルを選べます。"
+        :(source==="leap"?"LEAPの単語から選べます。":"鉄壁の単語から選べます。");
+}
+
+function getAvailableWordCount(){
+    const source=$("sourceSelect").value;
+    const labels=getSelectedLabels();
+    if(source==="myword"){
+        return myWords.filter(word=>!labels||labels.includes(norm(word.label))).length;
+    }
+    return source==="leap"?2300:2176;
+}
+
+function updateQuestionCountLimit(availableInRange){
+    const maximum=Math.max(1,availableInRange);
+    const input=$("questionCount");
+    input.max=maximum;
+    $("questionCountMax").textContent=`最大 ${availableInRange} 問`;
+
+    if(!questionCountInitialized){
+        input.value=Math.min(10,maximum);
+        questionCountInitialized=true;
+    }else if(!input.value||Number(input.value)>maximum){
+        input.value=maximum;
+    }
+}
+
+function updateRangeDefaults(){
+    const source=$("sourceSelect").value;
+    const availableCount=getAvailableWordCount();
+    const max=Math.max(1,availableCount);
+    $("endNumber").max=max;
+    $("endNumber").value=max;
+    updateQuestionCountLimit(availableCount);
+    $("rangeStatus").textContent=source==="myword"
+        ?`選択中の単語は${availableCount}語です。出題範囲は1〜${availableCount}の範囲で変更できます。`
+        :`${source==="leap"?"LEAP":"鉄壁"}は${availableCount}語です。末尾は1〜${availableCount}の範囲で変更できます。`;
+}
+
+$("sourceSelect").onchange=()=>{
+    updateLabels();
+    updateRangeDefaults();
+};
+$("startNumber").addEventListener("input",updateQuestionCountFromRange);
+$("endNumber").addEventListener("input",updateQuestionCountFromRange);
+$("questionCount").addEventListener("input",()=>{
+    if(Number($("questionCount").value)>Number($("questionCount").max)){
+        $("questionCount").value=$("questionCount").max;
+    }
+});
+
+function updateQuestionCountFromRange(){
+    const available=getAvailableWordCount();
+    const start=Math.max(1,Number($("startNumber").value)||1);
+    const end=Math.max(0,Number($("endNumber").value)||0);
+    const count=Math.max(0,Math.min(end,available)-start+1);
+    updateQuestionCountLimit(count);
+}
+
+document.querySelectorAll('input[name="mode"]').forEach(radio=>{
+    radio.onchange=()=>{
+        $("modeStatus").textContent=radio.value==="mistake"
+            ?"過去のテスト結果をもとに、間違え率が高い単語ほど出やすくします。"
+            :"範囲内からランダムに出題します。";
+    };
+});
+
+async function loadTestHistory(){
+    let testIds=[],from=0;
+    while(true){
+        const {data,error}=await supabaseClient
+            .from("test")
+            .select("id")
+            .eq("user_id",currentUserInformation.id)
+            .order("id",{ascending:true})
+            .range(from,from+999);
+        if(error){console.error(error);return null}
+        testIds=testIds.concat((data||[]).map(x=>x.id));
+        if(!data||data.length<1000)break;
+        from+=1000;
+    }
+
+    const history=new Map();
+    const chunkSize=500;
+    for(let i=0;i<testIds.length;i+=chunkSize){
+        const ids=testIds.slice(i,i+chunkSize);
+        if(!ids.length)continue;
+        let resultFrom=0;
+        while(true){
+            const {data,error}=await supabaseClient
+                .from("test_result")
+                .select("word_id,word_type,is_correct,answered_at")
+                .in("test_id",ids)
+                .range(resultFrom,resultFrom+999);
+            if(error){console.error(error);return null}
+            (data||[]).forEach(r=>{
+                const key=(r.word_type==="common"?"common":"myword")+":"+Number(r.word_id);
+                const h=history.get(key)||{attempts:0,wrong:0,lastWrongAt:null};
+                h.attempts++;
+                if(!r.is_correct){
+                    h.wrong++;
+                    if(r.answered_at && (!h.lastWrongAt || new Date(r.answered_at)>new Date(h.lastWrongAt))){
+                        h.lastWrongAt=r.answered_at;
+                    }
+                }
+                history.set(key,h);
+            });
+            if(!data||data.length<1000)break;
+            resultFrom+=1000;
+        }
+    }
+    return history;
+}
+
+function weightedSample(pool,count,history){
+    const remaining=pool.slice();
+    const selected=[];
+
+    while(selected.length<count&&remaining.length){
+        let totalWeight=0;
+        const weights=remaining.map(w=>{
+            const key=w.word_type+":"+w.id;
+            const h=history.get(key)||{attempts:0,wrong:0};
+            // 未出題の単語も重み1で残す。
+            // 間違え率に加えて、最後に間違えた時刻が最近であるほど優先する。
+            const errorRate=h.attempts>0?h.wrong/h.attempts:0;
+            const confidence=h.attempts/(h.attempts+3);
+            let recencyFactor=0;
+            if(h.lastWrongAt){
+                const daysAgo=Math.max(0,(Date.now()-new Date(h.lastWrongAt).getTime())/86400000);
+                // 7日程度で効果が約1/eになる指数減衰
+                recencyFactor=Math.exp(-daysAgo/7);
+            }
+            // 間違え率の効果は最大約5倍。最近の不正解はさらに最大約2倍分を加える。
+            const weight=1+4*errorRate*confidence+2*recencyFactor;
+            totalWeight+=weight;
+            return weight;
+        });
+
+        let target=Math.random()*totalWeight;
+        let index=remaining.length-1;
+        for(let i=0;i<weights.length;i++){
+            target-=weights[i];
+            if(target<=0){index=i;break;}
+        }
+        selected.push(remaining[index]);
+        remaining.splice(index,1);
+    }
+    return selected;
+}
+
+$("backButton").onclick=()=>location.href="mywords.html";
+
+$("logoutButton").onclick=async()=>{
+    const {error}=await supabaseClient.auth.signOut();
+    if(error){$("message").textContent="ログアウトに失敗しました。";return}
+    location.href="login.html";
+};
+
+$("startButton").onclick=async()=>{
+    const source=$("sourceSelect").value;
+    const labels=getSelectedLabels();
+    const start=Number($("startNumber").value);
+    const end=Number($("endNumber").value);
+    const count=Number($("questionCount").value);
+    const mode=document.querySelector('input[name="mode"]:checked').value;
+
+    const maxEnd=Number($("endNumber").max);
+    if(!Number.isInteger(start)||!Number.isInteger(end)||start<1||end<start||end>maxEnd){
+        $("message").textContent="範囲を正しく入力してください。";
+        return;
+    }
+    if(!Number.isInteger(count)||count<1||count>Number($("questionCount").max)){
+        $("message").textContent=`問題数は1〜${$("questionCount").max}問で入力してください。`;
+        return;
+    }
+
+    $("startButton").disabled=true;
+    $("message").textContent="出題単語を準備しています...";
+
+    let pool=[];
+    if(selectedOnly){
+        pool=selectedTestWords.slice();
+    }else if(source==="myword"){
+        pool=myWords.filter(w=>!labels||labels.includes(norm(w.label)))
+            .filter((w,i)=>i+1>=start&&i+1<=end).map(w=>({
+            id:Number(w.id),English:norm(w.English),Japanese:norm(w.Japanese),
+            label:norm(w.label),word_type:"myword"
+        }));
+    }else{
+        if(!await loadCommonWords(source)){
+            $("message").textContent="単語帳の取得に失敗しました。";
+            $("startButton").disabled=false;
+            return;
+        }
+        pool=commonWords.filter(w=>!labels||labels.includes(norm(w.label)))
+            .filter((w,i)=>i+1>=start&&i+1<=end).map(w=>({
+            id:Number(w.id),English:norm(w.English),Japanese:norm(w.Japanese),
+            label:norm(w.label),word_type:"common"
+        }));
+    }
+
+    if(!pool.length){
+        $("message").textContent="条件に合う単語がありません。";
+        $("startButton").disabled=false;
+        return;
+    }
+
+    if(pool.length<count){
+        $("message").textContent="条件に合う単語は"+pool.length+"語です。問題数を"+pool.length+"問以下にしてください。";
+        $("startButton").disabled=false;
+        return;
+    }
+
+    let selected;
+    if(mode==="mistake"){
+        const history=await loadTestHistory();
+        if(history===null){
+            $("message").textContent="過去のテスト結果を取得できませんでした。test/test_resultのRLS設定を確認してください。";
+            $("startButton").disabled=false;
+            return;
+        }
+        selected=weightedSample(pool,count,history);
+    }else{
+        for(let i=pool.length-1;i>0;i--){
+            const j=Math.floor(Math.random()*(i+1));
+            [pool[i],pool[j]]=[pool[j],pool[i]];
+        }
+        selected=pool.slice(0,count);
+    }
+    try{
+        localStorage.setItem("testWords",JSON.stringify(selected));
+        localStorage.setItem("testSettings",JSON.stringify({
+            source:selectedOnly?"selected":source,
+            label:selectedOnly?"__SELECTED__":(labels||["__ALL__"]),
+            start:selectedOnly?1:start,
+            end:selectedOnly?selectedTestWords.length:end,
+            count,mode
+        }));
+        if(selectedOnly)localStorage.removeItem("selectedTestWords");
+    }catch(e){
+        console.error(e);
+        $("message").textContent="テスト設定の保存に失敗しました。";
+        $("startButton").disabled=false;
+        return;
+    }
+
+    location.href="test.html";
+};
+
+(async()=>{
+    if(!await loadUser())return;
+    if(selectedOnly){
+        if(!loadSelectedTestWords()){
+            $("message").textContent="選択した単語を読み込めませんでした。";
+            $("startButton").disabled=true;
+            return;
+        }
+        setupSelectedOnlyPage();
+        return;
+    }
+    if(!await loadMyWords()){
+        $("message").textContent="自分の単語の取得に失敗しました。";
+        return;
+    }
+    updateLabels();
+    updateRangeDefaults();
+})();
+</script>
+<script>document.querySelectorAll(".app-nav a").forEach(a=>{if(a.dataset.page==="test_setting.html"){a.classList.add("active");a.setAttribute("aria-current","page")}});</script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!doctype html>
+    <html lang="ja">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1.0">
+            <title>自分の単語 - 単語テスト</title>
+            <link rel="icon" href="./icon-mark.png" type="image/png">
+            <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+            <script src="label-picker.js"></script>
+            <style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;font-family:Arial,sans-serif;color:#333}
+header{background:#fff;padding:18px 30px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px #00000014}
+header h1{margin:0;font-size:22px}.user-area{display:flex;align-items:center;gap:15px}#username{font-weight:bold}
+button{border:0;border-radius:6px;padding:9px 14px;background:#333;color:#fff;cursor:pointer;font-size:14px}button:hover{background:#555}button:disabled{background:#999;cursor:not-allowed}
+.secondary{background:#fff;color:#333;border:1px solid #ccc}.danger{background:#b33}.danger:hover{background:#922}
+main{width:94%;max-width:1100px;margin:30px auto}.card{background:#fff;padding:25px;border-radius:12px;margin-bottom:20px;box-shadow:0 3px 12px #0000000f}.card h2{margin-top:0}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:15px}
+#searchInput{width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;font-size:15px;margin-bottom:15px}
+.label-list{display:flex;gap:8px;flex-wrap:wrap}.label-button{background:#fff;color:#333;border:1px solid #ccc}.label-button.active{background:#333;color:#fff;border-color:#333}.count{opacity:.7;font-size:12px}
+.status{color:#666;margin:10px 0}.table-wrap{overflow-x:auto;border:1px solid #ddd;border-radius:7px}table{width:100%;border-collapse:collapse;min-width:720px}
+th,td{padding:11px 12px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}th{background:#f5f5f5}tr:last-child td{border-bottom:0}.checkbox{width:18px;height:18px}.action-cell{white-space:nowrap}.small-button{padding:6px 9px;margin-right:5px}
+.empty{text-align:center;color:#777;padding:35px}.pagination{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:18px}.page-info{color:#666}#message{text-align:center;margin-top:15px;min-height:20px}
+.modal-backdrop{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;padding:20px;z-index:10}.modal{background:#fff;width:100%;max-width:520px;border-radius:12px;padding:25px}
+.modal h2{margin-top:0}.modal label{display:block;margin:13px 0 6px;font-weight:bold}.modal input{width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;font-size:15px}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+@media(max-width:700px){header{padding:15px}main{width:94%}.card{padding:18px}.user-area{gap:8px}}
+            </style>
+            <link rel="stylesheet" href="photolex.css">
+        </head>
+        <body>
+            <header>
+                <a class="brand" href="index.html" aria-label="PhotoLex ホーム"><img src="assets/photolex-mark.png" alt=""><span>PhotoLex</span></a>
+                <h1>自分の単語</h1>
+                <nav class="app-nav" aria-label="メインナビゲーション">
+                    <a href="index.html" data-page="index.html">ホーム</a>
+                    <a href="mywords.html" data-page="mywords.html">自分の単語</a>
+                    <a href="words.html" data-page="words.html">単語帳</a>
+                    <a href="test_setting.html" data-page="test_setting.html">テスト</a>
+                </nav>
+                <div class="user-area">
+                    <span id="username">読み込み中...</span>
+                    <button id="logoutButton">ログアウト</button>
+                </div>
+            </header>
+            <main>
+                <div class="card">
+                    <div class="toolbar">
+                        <button id="homeButton" class="secondary">← ホームへ</button>
+                    </div>
+                    <h2>ラベル</h2>
+                    <div id="labelList">
+                        <p class="empty">読み込んでいます...</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2 id="currentLabelTitle">すべての単語</h2>
+                    <input id="searchInput" type="text" placeholder="英語・日本語から検索">
+                    <div class="toolbar">
+                        <button id="selectPageButton">表示中をすべて選択</button>
+                        <button id="clearSelectionButton" class="secondary">選択をすべて解除</button>
+                        <button id="bulkDeleteButton" class="danger">選択した単語を削除</button>
+                        <button id="makeTestButton">選択した単語でテストを作る</button>
+                    </div>
+                    <div id="selectionStatus" class="status">0語選択中</div>
+                    <div id="wordArea">
+                        <p class="empty">単語を読み込んでいます...</p>
+                    </div>
+                    <div class="pagination">
+                        <button id="prevButton" class="secondary">← 前へ</button>
+                        <span id="pageInfo" class="page-info"></span>
+                        <button id="nextButton" class="secondary">次へ →</button>
+                    </div>
+                    <div id="message">
+
+                    </div>
+                </div>
+            </main>
+            <div id="editBackdrop" class="modal-backdrop">
+                <div class="modal">
+                    <h2>単語を編集</h2>
+                    <label>英語</label>
+                    <input id="editEnglish" type="text">
+                    <label>日本語</label>
+                    <input id="editJapanese" type="text">
+                    <label>ラベル</label>
+                    <div class="label-picker">
+                        <select id="editLabel" aria-label="既存ラベルを選択"><option value="">ラベルなし</option></select>
+                        <input id="newEditLabel" type="text" placeholder="新しいラベル名" style="display:none" aria-label="新しいラベル名">
+                    </div>
+                    <div class="modal-actions">
+                        <button id="cancelEditButton" class="secondary">キャンセル</button>
+                        <button id="saveEditButton">保存</button>
+                    </div>
+                </div>
+            </div>
+        <script>
+            const SUPABASE_URL="Supabase_url";
+            const SUPABASE_ANON_KEY="●●";
+            const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+            const usernameElement=document.getElementById("username"),labelList=document.getElementById("labelList"),titleEl=document.getElementById("currentLabelTitle"),searchInput=document.getElementById("searchInput"),wordArea=document.getElementById("wordArea"),selectionStatus=document.getElementById("selectionStatus"),pageInfo=document.getElementById("pageInfo"),prevButton=document.getElementById("prevButton"),nextButton=document.getElementById("nextButton"),message=document.getElementById("message"),editLabel=document.getElementById("editLabel"),newEditLabel=document.getElementById("newEditLabel");
+            const bulkDeleteButton=document.getElementById("bulkDeleteButton");
+            PhotoLexLabels.attach(editLabel,newEditLabel);
+            let currentUserInformation=null,myWords=[],selectedIds=new Set(),currentLabel=null,currentPage=1,editingWordId=null;
+            const pageSize=100;
+            async function loadUser(){
+                const {data:{user},error}=await supabaseClient.auth.getUser();if(error||!user){location.href="login.html";return null}
+            const {data,error:e}=await supabaseClient.from("user_information").select("id,user_name,auth_user_id").eq("auth_user_id",user.id).single();
+            if(e){
+                console.error(e);
+                message.textContent="ユーザー情報の取得に失敗しました。";
+                return null
+            } 
+            usernameElement.textContent=data.user_name;currentUserInformation=data;return data}
+            async function loadMyWords(){let all=[],from=0;while(true){const {data,error}=await supabaseClient.from("Words").select("id,English,Japanese,label,created_at").eq("user_id",currentUserInformation.id).order("id",{ascending:true}).range(from,from+999);if(error){console.error(error);wordArea.innerHTML='<p class="empty">自分の単語の取得に失敗しました。</p>';return false}all=all.concat(data||[]);if(!data||data.length<1000)break;from+=1000}myWords=all;return true}
+            function norm(x){return x==null?"":String(x).trim()}
+            function escapeHtml(x){return String(x??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
+            function getLabels(){const m=new Map();myWords.forEach(w=>{const l=norm(w.label);m.set(l,(m.get(l)||0)+1)});return [...m].sort((a,b)=>a[0]===""?1:b[0]===""?-1:a[0].localeCompare(b[0],"ja"))}
+            function renderLabels(){PhotoLexLabels.remember(getLabels().map(([label])=>label),currentUserInformation?.id);let h='<button class="label-button '+(currentLabel===null?"active":"")+'" data-label="__ALL__">すべて <span class="count">('+myWords.length+')</span></button>';for(const [l,c] of getLabels()){const v=l===""?"__NONE__":l;h+='<button class="label-button '+(currentLabel===l?"active":"")+'" data-label="'+escapeHtml(v)+'">'+(l===""?"ラベルなし":escapeHtml(l))+' <span class="count">('+c+')</span></button>'}labelList.innerHTML=h;labelList.querySelectorAll("button").forEach(b=>b.onclick=()=>{const v=b.dataset.label;currentLabel=v==="__ALL__"?null:v==="__NONE__"?"":v;selectedIds.clear();currentPage=1;renderLabels();renderWords()})}
+            function filtered(){const s=searchInput.value.trim().toLowerCase();return myWords.filter(w=>{if(currentLabel!==null&&norm(w.label)!==currentLabel)return false;return !s||String(w.English||"").toLowerCase().includes(s)||String(w.Japanese||"").toLowerCase().includes(s)})}
+            function renderWords(){const a=filtered(),pages=Math.max(1,Math.ceil(a.length/pageSize));if(currentPage>pages)currentPage=pages;const shown=a.slice((currentPage-1)*pageSize,currentPage*pageSize);titleEl.textContent=currentLabel===null?"すべての単語":currentLabel===""?"ラベルなし":currentLabel;selectionStatus.textContent=selectedIds.size+"語選択中";pageInfo.textContent=a.length+"語中 "+currentPage+" / "+pages+"ページ";prevButton.disabled=currentPage<=1;nextButton.disabled=currentPage>=pages;
+            if(!shown.length){wordArea.innerHTML='<p class="empty">該当する単語がありません。</p>';return}
+            let h='<div class="table-wrap"><table><thead><tr><th>選択</th><th>英語</th><th>日本語</th><th>ラベル</th><th>操作</th></tr></thead><tbody>';
+            shown.forEach(w=>{h+='<tr><td><input class="checkbox word-check" type="checkbox" data-id="'+w.id+'" '+(selectedIds.has(Number(w.id))?"checked":"")+'></td><td>'+escapeHtml(w.English)+'</td><td>'+escapeHtml(w.Japanese)+'</td><td>'+escapeHtml(norm(w.label))+'</td><td class="action-cell"><button class="small-button edit-button" data-id="'+w.id+'">編集</button><button class="small-button danger delete-button" data-id="'+w.id+'">削除</button></td></tr>'});
+            wordArea.innerHTML=h+'</tbody></table></div>';
+            wordArea.querySelectorAll(".word-check").forEach(x=>x.onchange=()=>{const id=Number(x.dataset.id);x.checked?selectedIds.add(id):selectedIds.delete(id);selectionStatus.textContent=selectedIds.size+"語選択中"});
+            wordArea.querySelectorAll(".edit-button").forEach(x=>x.onclick=()=>openEdit(Number(x.dataset.id)));wordArea.querySelectorAll(".delete-button").forEach(x=>x.onclick=()=>deleteWord(Number(x.dataset.id)))}
+            function openEdit(id){const w=myWords.find(x=>Number(x.id)===id);if(!w)return;editingWordId=id;editEnglish.value=w.English||"";editJapanese.value=w.Japanese||"";PhotoLexLabels.populate(editLabel,getLabels().map(([label])=>label),norm(w.label));newEditLabel.value="";editBackdrop.style.display="flex"}
+            function closeEdit(){editingWordId=null;editBackdrop.style.display="none"}
+            async function saveEdit(){const en=editEnglish.value.trim(),ja=editJapanese.value.trim(),la=PhotoLexLabels.value(editLabel,newEditLabel);if(editLabel.value===PhotoLexLabels.CREATE_VALUE&&!la){alert("新しいラベル名を入力してください。");newEditLabel.focus();return}if(!en||!ja){alert("英語と日本語は入力してください。");return}saveEditButton.disabled=true;const {data,error}=await supabaseClient.from("Words").update({English:en,Japanese:ja,label:la||null}).eq("id",editingWordId).eq("user_id",currentUserInformation.id).select("id,English,Japanese,label,created_at").single();saveEditButton.disabled=false;if(error){console.error(error);message.textContent="単語の編集に失敗しました。";return}myWords[myWords.findIndex(w=>Number(w.id)===editingWordId)]=data;closeEdit();renderLabels();renderWords();message.textContent="単語を更新しました。"}
+            async function deleteWord(id){const w=myWords.find(x=>Number(x.id)===id);if(!w||!confirm("「"+w.English+"」を削除しますか？"))return;const {error}=await supabaseClient.from("Words").delete().eq("id",id).eq("user_id",currentUserInformation.id);if(error){console.error(error);message.textContent="単語の削除に失敗しました。";return}myWords=myWords.filter(x=>Number(x.id)!==id);selectedIds.delete(id);renderLabels();renderWords();message.textContent="単語を削除しました。"}
+            async function bulkDelete(){
+                const ids=[...selectedIds].filter(id=>myWords.some(word=>Number(word.id)===Number(id)));
+                if(!ids.length){
+                    selectedIds.clear();
+                    renderWords();
+                    message.textContent="削除する単語を選択してください。";
+                    return;
+                }
+                if(!confirm(ids.length+"語を削除しますか？"))return;
+
+                bulkDeleteButton.disabled=true;
+                message.textContent=ids.length+"語を削除しています...";
+                let error=null;
+                try{
+                    const result=await supabaseClient
+                        .from("Words")
+                        .delete()
+                        .eq("user_id",currentUserInformation.id)
+                        .in("id",ids);
+                    error=result.error;
+                }catch(requestError){
+                    console.error(requestError);
+                    error=requestError;
+                }finally{
+                    bulkDeleteButton.disabled=false;
+                }
+
+                if(error){
+                    console.error(error);
+                    message.textContent="一括削除に失敗しました。選択した単語はそのまま残しています。";
+                    return;
+                }
+
+                const deletedIds=new Set(ids.map(Number));
+                myWords=myWords.filter(word=>!deletedIds.has(Number(word.id)));
+                selectedIds.clear();
+                renderLabels();
+                renderWords();
+                message.textContent=ids.length+"語を削除しました。";
+            }
+            bulkDeleteButton.onclick=bulkDelete;
+            selectPageButton.onclick=()=>{filtered().slice((currentPage-1)*pageSize,currentPage*pageSize).forEach(w=>selectedIds.add(Number(w.id)));renderWords();message.textContent="表示中の単語を選択しました。"};
+            clearSelectionButton.onclick=()=>{selectedIds.clear();renderWords();message.textContent="選択をすべて解除しました。"};
+            makeTestButton.onclick=()=>{
+                if(!selectedIds.size){
+                    message.textContent="テストに使う単語を選択してください。";
+                    return;
+                }
+
+                const selectedWords=myWords
+                    .filter(w=>selectedIds.has(Number(w.id)))
+                    .map(w=>({
+                        id:Number(w.id),
+                        English:norm(w.English),
+                        Japanese:norm(w.Japanese),
+                        label:norm(w.label),
+                        word_type:"myword"
+                    }));
+
+                localStorage.setItem("selectedTestWords",JSON.stringify(selectedWords));
+                window.location.href="test_setting.html?selected=1";
+            };
+            searchInput.oninput=()=>{currentPage=1;renderWords()};prevButton.onclick=()=>{if(currentPage>1){currentPage--;renderWords()}};nextButton.onclick=()=>{if(currentPage<Math.ceil(filtered().length/pageSize)){currentPage++;renderWords()}};
+            cancelEditButton.onclick=closeEdit;saveEditButton.onclick=saveEdit;editBackdrop.onclick=e=>{if(e.target===editBackdrop)closeEdit};homeButton.onclick=()=>location.href="index.html";
+            logoutButton.onclick=async()=>{const {error}=await supabaseClient.auth.signOut();if(error){message.textContent="ログアウトに失敗しました。";return}location.href="login.html"};
+            (async()=>{if(await loadUser()&&await loadMyWords()){renderLabels();renderWords()}})();
+        </script>
+        <script>document.querySelectorAll(".app-nav a").forEach(a=>{if(a.dataset.page==="mywords.html"){a.classList.add("active");a.setAttribute("aria-current","page")}});</script>
+    </body>
+</html>

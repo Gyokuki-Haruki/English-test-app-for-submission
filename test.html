@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <title>単語テスト</title>
+        <link rel="icon" href="./icon-mark.png" type="image/png">
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <script src="label-picker.js"></script>
+        <style>
+        *{box-sizing:border-box}body{margin:0;background:#f5f6f8;font-family:Arial,sans-serif;color:#333}
+        header{background:#fff;padding:18px 30px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+        header h1{margin:0;font-size:22px}.user-area{display:flex;align-items:center;gap:15px}#username{font-weight:bold}
+        /* ===== ボタン ===== */
+
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: 
+                background 0.2s ease,
+                transform 0.1s ease,
+                box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            background: #555;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        button:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+
+        button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+
+        /* メインボタン */
+
+        .btn-primary {
+            background: #333;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #222;
+        }
+
+
+        /* サブボタン */
+
+        .btn-secondary {
+            background: #fff;
+            color: #333;
+            border: 1px solid #d5d5d5;
+        }
+
+        .btn-secondary:hover {
+            background: #f5f5f5;
+        }
+
+
+        /* 削除ボタン */
+
+        .btn-danger {
+            background: #fff;
+            color: #b33;
+            border: 1px solid #e0b0b0;
+        }
+
+        .btn-danger:hover {
+            background: #fff5f5;
+        }
+
+
+        /* 小さいボタン */
+
+        .btn-small {
+            padding: 7px 12px;
+            font-size: 13px;
+            border-radius: 7px;
+        }
+        main{width:94%;max-width:900px;margin:30px auto}.card{background:#fff;padding:25px;border-radius:12px;margin-bottom:20px;box-shadow:0 3px 12px rgba(0,0,0,.06)}
+        .center{text-align:center}.question-number{color:#666;margin-bottom:15px}.question{font-size:28px;font-weight:bold;margin:30px 0;word-break:break-word}
+        .answer-input{width:100%;max-width:650px;padding:14px;border:1px solid #ccc;border-radius:7px;font-size:20px}
+        .actions{display:flex;justify-content:center;gap:10px;margin-top:20px;flex-wrap:wrap}
+        .answer-correct {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .answer-wrong {
+            font-size: 24px;
+            font-weight: bold;
+            color: #b33;
+        }
+
+        .answer-detail {
+            margin-top: 8px;
+            line-height: 1.8;
+        }
+        .status{color:#666;margin:10px 0}
+        .result-list{display:flex;flex-direction:column;gap:10px}.result-item{border:1px solid #ddd;border-radius:8px;padding:14px}
+        .result-item.correct{border-left:5px solid #333}.result-item.wrong{border-left:5px solid #b33}
+        .result-en{font-weight:bold;font-size:18px}.result-ja{margin-top:4px}.result-answer{margin-top:7px;color:#666}
+        .score{font-size:30px;font-weight:bold;text-align:center;margin:25px 0}.hidden{display:none}
+        @media(max-width:700px){header{padding:15px}main{width:94%}.card{padding:18px}.question{font-size:24px}.answer-input{font-size:18px}}
+
+        /* 不正解時の正しいスペル */
+        .correction-word {
+            font-size: 42px;
+            font-weight: 700;
+            color: #b33;
+            margin: 0 auto 20px;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 700px) {
+            .correction-word {
+                font-size: 34px;
+            }
+        }
+
+        </style>
+        <link rel="stylesheet" href="photolex.css">
+    </head>
+    <body>
+        <header>
+            <a class="brand" href="index.html" aria-label="PhotoLex ホーム">
+                <img src="assets/photolex-mark.png" alt="">
+                <span>PhotoLex</span>
+            </a>
+            <h1>単語テスト</h1>
+            <nav class="app-nav" aria-label="メインナビゲーション">
+                <a href="index.html" data-page="index.html">ホーム</a>
+                <a href="mywords.html" data-page="mywords.html">自分の単語</a>
+                <a href="words.html" data-page="words.html">単語帳</a>
+                <a href="test_setting.html" data-page="test_setting.html">テスト</a>
+            </nav>
+            <div class="user-area">
+                <span id="username">読み込み中...</span>
+                <button id="logoutButton">ログアウト</button>
+            </div>
+        </header>
+        <main>
+            <div id="loadingCard" class="card center">
+                <p>テストを準備しています...</p>
+            </div>
+            <div id="testCard" class="card center hidden">
+
+            <div id="questionNumber" class="question-number"></div>
+            <div id="question" class="question"></div>
+
+        <!-- 不正解時に正しいスペルを大きく表示 -->
+            <div id="correctionWord" class="correction-word hidden"></div>
+
+            <input id="answerInput" class="answer-input" type="text" autocomplete="off" placeholder="英語を入力">
+
+            <div id="hintDisplay" class="hint-display" aria-live="polite"></div>
+            <div class="actions">
+                <button id="hintButton" class="btn-secondary" type="button">ヒント</button>
+                <button id="submitButton" class="btn-primary">回答する</button>
+            </div>
+            <div id="answerStatus" class="status"></div>
+        </div>
+        <div id="finishCard" class="card hidden">
+            <h2>テスト結果</h2>
+            <div id="score" class="score"></div>
+            <div id="saveStatus" class="status"></div>
+            <section class="label-tools" aria-labelledby="resultLabelHeading">
+                <label id="resultLabelHeading">結果の単語に付けるラベル
+                    <select id="resultLabelSelect"><option value="">ラベルなし</option></select>
+                    <input id="newResultLabel" type="text" placeholder="新しいラベル名" style="display:none" aria-label="新しいラベル名">
+                </label>
+                <div class="label-picker-help">初期状態では間違えた単語を選択しています。チェックで対象を変更できます。</div>
+                <button id="applyResultLabelButton" type="button">選択した単語にラベルを適用</button>
+            </section>
+            <div id="resultLabelStatus" class="status" role="status" aria-live="polite"></div>
+            <div id="resultList" class="result-list"></div>
+
+            <div class="actions">
+                <button id="retryWrongButton" class="btn-primary hidden" type="button">
+                    間違えた問題だけでもう一度
+                </button>
+                <button id="backHomeButton" class="btn-secondary">
+                    ホームへ
+                </button>
+
+                <button id="backMyWordsButton" class="btn-secondary">
+                    自分の単語へ
+                </button>
+            </div>
+        </div>
+
+        <div id="errorCard" class="card center hidden">
+            <p id="errorMessage"></p>
+
+            <div class="actions">
+                <button id="errorBackButton" class="btn-secondary">
+                    自分の単語へ戻る
+                </button>
+            </div>
+        </div>
+
+        </main>
+        <script>
+        const SUPABASE_URL = "Supabase_url";
+        const SUPABASE_ANON_KEY = "●●";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const $ = id => document.getElementById(id);
+
+        let currentUserInformation = null;
+        let testWords = [];
+        let currentIndex = 0;
+        let results = [];
+        let testId = null;
+        let correctionRequired = false;
+        let correctionCount = 0;
+        let revealedHintPositions = new Set();
+
+        function norm(value) {
+            return value == null ? "" : String(value).trim();
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function showError(message) {
+            $("loadingCard").classList.add("hidden");
+            $("testCard").classList.add("hidden");
+            $("finishCard").classList.add("hidden");
+            $("errorCard").classList.remove("hidden");
+            $("errorMessage").textContent = message;
+        }
+
+        async function loadUser(){
+            const { data: { user }, error } = await supabaseClient.auth.getUser();
+            if (error || !user) {
+                location.href = "login.html";
+                return false;
+            }
+
+            const { data, error: userError } = await supabaseClient
+                .from("user_information")
+                .select("id,user_name,auth_user_id")
+                .eq("auth_user_id", user.id)
+                .single();
+
+            if (userError) {
+                console.error(userError);
+                showError("ユーザー情報の取得に失敗しました。");
+                return false;
+            }
+
+            currentUserInformation = data;
+            $("username").textContent = data.user_name;
+            return true;
+        }
+
+        function loadTestWords() {
+            let raw;
+            try {
+                raw = localStorage.getItem("testWords");
+            } catch (error) {
+                console.error(error);
+            }
+
+            if (!raw) {
+                showError("テストに使う単語が選択されていません。");
+                return false;
+            }
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (!Array.isArray(parsed) || !parsed.length) {
+                    showError("テストに使う単語がありません。");
+                    return false;
+                }
+
+                testWords = parsed
+                    .filter(word => word && norm(word.English))
+                    .map(word => ({
+                        id: Number(word.id),
+                        English: norm(word.English),
+                        Japanese: norm(word.Japanese),
+                        label: norm(word.label),
+                        word_type: word.word_type === "common" ? "common" : "myword"
+                    }));
+
+                if (!testWords.length) {
+                    showError("有効な単語がありません。");
+                    return false;
+                }
+
+                const seen = new Set();
+                testWords = testWords.filter(word => {
+                    const key = `${word.word_type}:${word.id}`;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+
+                // test_setting.html has already shuffled or priority-ranked the words.
+                // Preserve its order so the selected mode remains meaningful.
+                return true;
+            } catch (error) {
+                console.error(error);
+                showError("テストデータの読み込みに失敗しました。");
+                return false;
+            }
+        }
+
+        async function createTest() {
+            const { data, error } = await supabaseClient
+                .from("test")
+                .insert({ user_id: currentUserInformation.id })
+                .select("id")
+                .single();
+
+            if (error) {
+                console.error(error);
+                showError("テストの記録を開始できませんでした。SupabaseのRLS設定を確認してください。");
+                return false;
+            }
+
+            testId = data.id;
+            return true;
+        }
+
+        function renderQuestion() {
+            const word = testWords[currentIndex];
+
+            correctionRequired = false;
+            correctionCount = 0;
+            revealedHintPositions = new Set();
+
+            $("hintDisplay").textContent = "";
+            $("hintButton").disabled = false;
+            $("hintButton").textContent = "ヒント";
+            $("questionNumber").textContent = `${currentIndex + 1} / ${testWords.length} 問`;
+            $("question").textContent = word.Japanese || "(日本語が登録されていません)";
+            $("correctionWord").textContent = "";
+            $("correctionWord").classList.add("hidden");
+
+            $("answerInput").value = "";
+            $("answerInput").placeholder = "英語を入力";
+            $("answerInput").setAttribute("aria-label", "英語の答え");
+            $("answerStatus").textContent = "";
+            $("submitButton").textContent = "回答する";
+            $("answerInput").disabled = false;
+            $("submitButton").disabled = false;
+            $("answerInput").focus();
+        }
+
+        function revealHintLetter() {
+            const letters = Array.from(testWords[currentIndex].English);
+            const unrevealed = letters
+                .map((character, index) => ({ character, index }))
+                .filter(({ character, index }) =>
+                    /\p{L}/u.test(character) && !revealedHintPositions.has(index)
+                );
+
+            if (!unrevealed.length) {
+                $("hintButton").disabled = true;
+                return;
+            }
+
+            revealedHintPositions.add(unrevealed[0].index);
+            $("hintDisplay").textContent = letters
+                .map((character, index) => {
+                    const isSeparator = !/\p{L}/u.test(character);
+                    return isSeparator || revealedHintPositions.has(index) ? character : "＿";
+                })
+                .join("");
+
+            const remaining = letters.filter((character, index) =>
+                /\p{L}/u.test(character) && !revealedHintPositions.has(index)
+            ).length;
+            $("hintButton").textContent = remaining
+                ? `ヒント（あと${remaining}文字）`
+                : "ヒントを表示しました";
+            $("hintButton").disabled = remaining === 0;
+        }
+
+        function advanceQuestion() {
+            currentIndex += 1;
+            if (currentIndex >= testWords.length) {
+                finishTest();
+                return;
+            }
+
+            renderQuestion();
+        }
+
+        $("hintButton").addEventListener("click", revealHintLetter);
+
+
+        function showCorrectionPrompt(message) {
+            const w = testWords[currentIndex];
+
+            // 正しいスペルを入力欄の上に大きく表示
+            $("correctionWord").textContent = w.English;
+            $("correctionWord").classList.remove("hidden");
+
+            $("answerStatus").innerHTML =
+                `<div class="answer-wrong">不正解</div>
+                <div class="answer-detail">${message}<br>
+                正しいスペルを3回入力すると次へ進みます（${correctionCount}/3回）。</div>`;
+        }
+
+
+        async function submitAnswer() {
+            if ($("submitButton").disabled) return;
+
+            const word = testWords[currentIndex];
+            const answer = norm($("answerInput").value);
+            if (!answer) {
+                if (correctionRequired) {
+                    showCorrectionPrompt("正しいスペルを入力してください。");
+                } else {
+                    $("answerStatus").textContent = "英語を入力してください。";
+                }
+                $("answerInput").focus();
+                return;
+            }
+
+            if (correctionRequired) {
+                if (answer.toLowerCase() !== word.English.toLowerCase()) {
+                    $("answerInput").value = "";
+                    showCorrectionPrompt("スペルが違います。もう一度入力してください。");
+                    $("answerInput").focus();
+                    return;
+                }
+
+                correctionCount += 1;
+                $("answerInput").value = "";
+                if (correctionCount < 3) {
+                    showCorrectionPrompt("正しいスペルです。続けて入力してください。");
+                    $("answerInput").focus();
+                    return;
+                }
+
+                correctionRequired = false;
+                $("answerInput").disabled = true;
+                $("submitButton").disabled = true;
+                $("answerStatus").innerHTML =
+                    `<div class="answer-correct">3回入力できました</div>` +
+                    `<div class="answer-detail">正解：<strong>${escapeHtml(word.English)}</strong><br>` +
+                    "次の問題へ進みます。</div>";
+                setTimeout(advanceQuestion, 300);
+                return;
+            }
+
+            const correct = answer.toLowerCase() === word.English.toLowerCase();
+            results.push({
+                word_id: word.id,
+                word_type: word.word_type,
+                English: word.English,
+                Japanese: word.Japanese,
+                label: word.label,
+                answer,
+                is_correct: correct
+            });
+
+            if (correct) {
+                $("answerInput").disabled = true;
+                $("submitButton").disabled = true;
+                $("answerStatus").innerHTML = '<div class="answer-correct">正解</div>';
+                setTimeout(advanceQuestion, 500);
+                return;
+            }
+
+            correctionRequired = true;
+            $("answerInput").value = "";
+            $("answerInput").placeholder = "正しいスペルを入力";
+            $("answerInput").setAttribute("aria-label", "正しいスペルを入力");
+            $("submitButton").textContent = "スペルを確認";
+            showCorrectionPrompt(`あなたの答え：${escapeHtml(answer)}`);
+            $("answerInput").focus();
+        }
+
+        async function saveResults() {
+            const answeredAt = new Date().toISOString();
+            const rows = results.map(result => ({
+                test_id: testId,
+                word_id: result.word_id,
+                word_type: result.word_type,
+                is_correct: result.is_correct,
+                answered_at: answeredAt
+            }));
+
+            const { error } = await supabaseClient
+                .from("test_result")
+                .insert(rows);
+            if (error) {
+                console.error(error);
+                return false;
+            }
+
+            return true;
+        }
+
+        function loadUserLabels() {
+            const labelsFromTestWords = testWords
+                .filter(word => word.word_type === "myword")
+                .map(word => norm(word.label))
+                .filter(Boolean);
+
+            return [...new Set([
+                ...PhotoLexLabels.remembered(currentUserInformation?.id),
+                ...labelsFromTestWords
+            ])];
+        }
+
+        async function fetchMatchingUserWords(englishWords) {
+            const uniqueWords = [...new Set(englishWords.map(norm).filter(Boolean))];
+            if (!uniqueWords.length) return [];
+
+            const { data, error } = await supabaseClient
+                .from("Words")
+                .select("id,English")
+                .eq("user_id", currentUserInformation.id)
+                .in("English", uniqueWords);
+
+            if (error) throw error;
+            return data || [];
+        }
+
+        async function applyResultLabel() {
+            const selected = [
+                ...document.querySelectorAll(".result-label-check input:checked")
+            ]
+                .map(input => results[Number(input.dataset.index)])
+                .filter(Boolean);
+
+            if (!selected.length) {
+                $("resultLabelStatus").textContent = "ラベルを付ける単語を選択してください。";
+                return;
+            }
+
+            const label = PhotoLexLabels.value(
+                $("resultLabelSelect"),
+                $("newResultLabel")
+            );
+
+            if ($("resultLabelSelect").value === PhotoLexLabels.CREATE_VALUE && !label) {
+                $("resultLabelStatus").textContent = "新しいラベル名を入力してください。";
+                $("newResultLabel").focus();
+                return;
+            }
+
+            const button = $("applyResultLabelButton");
+            button.disabled = true;
+            $("resultLabelStatus").textContent = "ラベルを更新しています...";
+
+            try {
+                const common = selected.filter(row => row.word_type === "common");
+
+                const userRows = common.length
+                    ? await fetchMatchingUserWords(common.map(row => row.English))
+                    : [];
+
+                const existingByEnglish = new Map(
+                    userRows.map(row => [norm(row.English).toLocaleLowerCase(), row])
+                );
+
+                const updateIds = new Set();
+                const toInsert = new Map();
+
+                for (const row of selected) {
+                    if (row.word_type === "common") {
+                        const key = norm(row.English).toLocaleLowerCase();
+                        const existing = existingByEnglish.get(key);
+
+                        if (existing) {
+                            updateIds.add(Number(existing.id));
+                        } else if (!toInsert.has(key)) {
+                            toInsert.set(key, {
+                                English: row.English,
+                                Japanese: row.Japanese,
+                                label: label || null,
+                                user_id: currentUserInformation.id
+                            });
+                        }
+                    } else {
+                        updateIds.add(Number(row.word_id));
+                    }
+                }
+
+                const ids = [...updateIds];
+                let updatedCount = 0;
+
+                for (let i = 0; i < ids.length; i += 500) {
+                    const { data, error } = await supabaseClient
+                        .from("Words")
+                        .update({ label: label || null })
+                        .eq("user_id", currentUserInformation.id)
+                        .in("id", ids.slice(i, i + 500))
+                        .select("id");
+
+                    if (error) throw error;
+
+                    updatedCount += data.length;
+                }
+
+                const additions = [...toInsert.values()];
+
+                if (additions.length) {
+                    const { error } = await supabaseClient
+                        .from("Words")
+                        .insert(additions);
+
+                    if (error) throw error;
+                }
+
+                for (const row of selected) {
+                    if (row.word_type !== "myword") continue;
+
+                    row.label = label;
+                    const resultIndex = results.indexOf(row);
+                    const checkbox = document.querySelector(
+                        `.result-label-check input[data-index="${resultIndex}"]`
+                    );
+                    const labelDisplay = checkbox?.closest(".result-item")
+                        ?.querySelector(".result-label");
+                    if (labelDisplay) {
+                        labelDisplay.textContent = `ラベル：${label || "ラベルなし"}`;
+                    }
+                }
+
+                $("resultLabelStatus").textContent =
+                    `${updatedCount + additions.length}語を「${label || "ラベルなし"}」にしました` +
+                    `（既存更新 ${updatedCount}語、新規保存 ${additions.length}語）。`;
+
+                const known = [
+                    ...new Set([...loadUserLabels(), ...(label ? [label] : [])])
+                ];
+
+                PhotoLexLabels.remember(known, currentUserInformation.id);
+                PhotoLexLabels.populate($("resultLabelSelect"), known, label);
+                $("newResultLabel").value = "";
+
+            } catch (error) {
+                console.error("ラベル更新エラー:", error);
+                $("resultLabelStatus").textContent =
+                    "ラベルの更新に失敗しました。Consoleのエラーを確認してください。";
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function finishTest() {
+            $("testCard").classList.add("hidden");
+            $("finishCard").classList.remove("hidden");
+
+            const wrongResults = results.filter(result => !result.is_correct);
+            const correctCount = results.length - wrongResults.length;
+            $("score").textContent = `${correctCount} / ${results.length} 正解`;
+            $("retryWrongButton").classList.toggle("hidden", wrongResults.length === 0);
+            $("retryWrongButton").disabled = true;
+
+            $("saveStatus").textContent = "結果を保存しています...";
+            const saved = await saveResults();
+            $("retryWrongButton").disabled = false;
+            $("saveStatus").textContent = saved
+                ? "テスト結果を保存しました。"
+                : "結果の保存に失敗しました。test_resultのRLS設定を確認してください。";
+
+            if (saved) {
+                try {
+                    localStorage.removeItem("testWords");
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+
+            PhotoLexLabels.populate($("resultLabelSelect"), loadUserLabels());
+            $("resultList").innerHTML = results.map(renderResult).join("");
+        }
+
+        function renderResult(result, index) {
+            const status = result.is_correct ? "correct" : "wrong";
+            const mark = result.is_correct ? "○" : "×";
+            const ownWordLabel = result.word_type === "myword"
+                ? `<div class="result-label">ラベル：${escapeHtml(result.label || "ラベルなし")}</div>`
+                : "";
+            const correctAnswer = result.is_correct
+                ? ""
+                : `<div class="result-answer">正解：${escapeHtml(result.English)}</div>`;
+
+            return `<div class="result-item ${status}">
+                <div class="result-en">${mark} ${escapeHtml(result.English)}</div>
+                <div class="result-ja">${escapeHtml(result.Japanese)}</div>
+                ${ownWordLabel}
+                <div class="result-answer">あなたの回答：${escapeHtml(result.answer)}</div>
+                ${correctAnswer}
+                <label class="result-label-check">
+                    <input type="checkbox" data-index="${index}" ${result.is_correct ? "" : "checked"}>
+                    この単語にラベルを適用
+                </label>
+            </div>`;
+        }
+
+        function retryWrongQuestions() {
+            const wrongWords = results
+                .filter(result => !result.is_correct)
+                .map(result => ({
+                    id: result.word_id,
+                    English: result.English,
+                    Japanese: result.Japanese,
+                    label: result.label,
+                    word_type: result.word_type
+                }));
+
+            if (!wrongWords.length) return;
+
+            for (let index = wrongWords.length - 1; index > 0; index -= 1) {
+                const randomIndex = Math.floor(Math.random() * (index + 1));
+                [wrongWords[index], wrongWords[randomIndex]] = [
+                    wrongWords[randomIndex],
+                    wrongWords[index]
+                ];
+            }
+
+            try {
+                localStorage.setItem("testWords", JSON.stringify(wrongWords));
+                localStorage.setItem("testSettings", JSON.stringify({
+                    source: "wrong-only",
+                    count: wrongWords.length,
+                    mode: "random"
+                }));
+                location.href = "test.html";
+            } catch (error) {
+                console.error(error);
+                $("resultLabelStatus").textContent = "再テストの準備に失敗しました。もう一度お試しください。";
+            }
+        }
+
+        $("submitButton").onclick = submitAnswer;
+        PhotoLexLabels.attach($("resultLabelSelect"), $("newResultLabel"));
+        $("applyResultLabelButton").onclick = applyResultLabel;
+        $("retryWrongButton").onclick = retryWrongQuestions;
+        $("answerInput").addEventListener("keydown", event => {
+            if (event.key === "Enter") submitAnswer();
+        });
+        $("backHomeButton").onclick = () => {
+            location.href = "index.html";
+        };
+        $("backMyWordsButton").onclick = () => {
+            location.href = "mywords.html";
+        };
+        $("errorBackButton").onclick = () => {
+            location.href = "mywords.html";
+        };
+        $("logoutButton").onclick = async () => {
+            const { error } = await supabaseClient.auth.signOut();
+            if (error) {
+                alert("ログアウトに失敗しました。");
+                return;
+            }
+            location.href = "login.html";
+        };
+
+        async function initializeTestPage() {
+            if (!await loadUser()) return;
+            if (!loadTestWords()) return;
+            if (!await createTest()) return;
+
+            $("loadingCard").classList.add("hidden");
+            $("testCard").classList.remove("hidden");
+            renderQuestion();
+        }
+
+        initializeTestPage();
+        </script>
+        <script>document.querySelectorAll(".app-nav a").forEach(a=>{if(a.dataset.page==="test.html"){a.classList.add("active");a.setAttribute("aria-current","page")}});</script>
+    </body>
+</html>

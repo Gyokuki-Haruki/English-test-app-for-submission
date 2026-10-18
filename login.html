@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ログイン</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f5f6f8;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 400px;
+            background: white;
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 25px;
+        }
+
+        .tabs button {
+            width: 50%;
+            padding: 12px;
+            border: none;
+            background: #eee;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .tabs button.active {
+            background: #333;
+            color: white;
+        }
+
+        .form {
+            display: none;
+        }
+
+        .form.active {
+            display: block;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .submit-button {
+            width: 100%;
+            margin-top: 25px;
+            padding: 13px;
+            border: none;
+            border-radius: 6px;
+            background: #333;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .submit-button:hover {
+            background: #555;
+        }
+
+        .message {
+            margin-top: 15px;
+            text-align: center;
+            min-height: 20px;
+        }
+    </style>
+    <link rel="stylesheet" href="photolex.css">
+    <link rel="icon" href="./icon-mark.png" type="image/png">
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>英単語を、撮って、覚える。</h1>
+
+    <div class="tabs">
+        <button id="loginTab" class="active">ログイン</button>
+        <button id="signupTab">新規登録</button>
+    </div>
+
+    <!-- ログイン -->
+    <div id="loginForm" class="form active">
+
+        <label for="loginUsername">ID</label>
+        <input
+            type="text"
+            id="loginUsername"
+            placeholder="IDを入力"
+            autocomplete="username"
+        >
+
+        <label for="loginPassword">パスワード</label>
+        <input
+            type="password"
+            id="loginPassword"
+            placeholder="パスワードを入力"
+            autocomplete="current-password"
+        >
+
+        <button class="submit-button" id="loginButton">
+            ログイン
+        </button>
+
+    </div>
+
+
+    <!-- 新規登録 -->
+    <div id="signupForm" class="form">
+
+        <label for="signupUsername">ID</label>
+        <input
+            type="text"
+            id="signupUsername"
+            placeholder="好きなIDを入力"
+            autocomplete="username"
+        >
+
+        <label for="signupPassword">パスワード</label>
+        <input
+            type="password"
+            id="signupPassword"
+            placeholder="パスワードを入力"
+            autocomplete="new-password"
+        >
+
+        <label for="signupPasswordConfirm">パスワード（確認）</label>
+        <input
+            type="password"
+            id="signupPasswordConfirm"
+            placeholder="もう一度入力"
+            autocomplete="new-password"
+        >
+
+        <button class="submit-button" id="signupButton">
+            新規登録
+        </button>
+
+    </div>
+
+    <div id="message" class="message"></div>
+
+</div>
+
+
+<script>
+
+    // ==========================================
+    // Supabase設定
+    // ==========================================
+
+    const SUPABASE_URL = "Supabase_url";
+    const SUPABASE_ANON_KEY = "●●";
+
+    const supabaseClient = supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+    );
+
+
+    // ==========================================
+    // タブ切り替え
+    // ==========================================
+
+    const loginTab = document.getElementById("loginTab");
+    const signupTab = document.getElementById("signupTab");
+
+    const loginForm = document.getElementById("loginForm");
+    const signupForm = document.getElementById("signupForm");
+
+    loginTab.addEventListener("click", () => {
+
+        loginTab.classList.add("active");
+        signupTab.classList.remove("active");
+
+        loginForm.classList.add("active");
+        signupForm.classList.remove("active");
+
+        message.textContent = "";
+    });
+
+    signupTab.addEventListener("click", () => {
+
+        signupTab.classList.add("active");
+        loginTab.classList.remove("active");
+
+        signupForm.classList.add("active");
+        loginForm.classList.remove("active");
+
+        message.textContent = "";
+    });
+
+
+    // ==========================================
+    // メッセージ表示
+    // ==========================================
+
+    const message = document.getElementById("message");
+
+    function showMessage(text) {
+        message.textContent = text;
+    }
+
+
+    // ==========================================
+    // ID → Supabase Auth用の疑似メールアドレス
+    // ==========================================
+
+    function makeAuthEmail(username) {
+        return username.toLowerCase() + "@pghgyvsvifgbnksaflhd.supabase.co";
+    }
+
+
+    // ==========================================
+// 新規登録
+// ==========================================
+
+document.getElementById("signupButton").addEventListener("click", async () => {
+
+    const username =
+        document.getElementById("signupUsername").value.trim();
+
+    const password =
+        document.getElementById("signupPassword").value;
+
+    const passwordConfirm =
+        document.getElementById("signupPasswordConfirm").value;
+
+
+    // IDチェック
+    if (username === "") {
+        showMessage("IDを入力してください。");
+        return;
+    }
+
+    if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
+        showMessage("IDは英数字、.、_、- のみ使用できます。");
+        return;
+    }
+
+    // パスワードチェック
+    if (password === "") {
+        showMessage("パスワードを入力してください。");
+        return;
+    }
+
+    if (password.length < 8) {
+        showMessage("パスワードは8文字以上にしてください。");
+        return;
+    }
+
+    if (password !== passwordConfirm) {
+        showMessage("パスワードが一致していません。");
+        return;
+    }
+
+
+    // ボタンを一時的に無効化
+    const signupButton = document.getElementById("signupButton");
+    signupButton.disabled = true;
+    signupButton.textContent = "登録中...";
+
+
+    // Edge Functionを呼び出す
+    const { data, error } =
+        await supabaseClient.functions.invoke("smart-task", {
+            body: {
+                username: username,
+                password: password
+            }
+        });
+
+
+    // Edge Function自体のエラー
+    if (error) {
+        console.error("Edge Function error:", error);
+        showMessage("登録に失敗しました：" + error.message);
+        signupButton.disabled = false;
+        signupButton.textContent = "新規登録";
+        return;
+    }
+
+
+    // Edge Functionから返されたエラー
+    if (!data || !data.ok) {
+        console.error("Edge Function response:", data);
+        showMessage(
+            "登録に失敗しました：" +
+            (data?.error || "原因不明のエラー")
+        );
+
+        signupButton.disabled = false;
+        signupButton.textContent = "新規登録";
+        return;
+    }
+
+
+    // 登録成功
+    showMessage("登録しました。ログインしてください。");
+
+    signupButton.disabled = false;
+    signupButton.textContent = "新規登録";
+
+
+    // ログイン画面へ
+    loginTab.click();
+
+    document.getElementById("loginUsername").value = username;
+});
+
+    // ==========================================
+    // ログイン
+    // ==========================================
+
+    document.getElementById("loginButton").addEventListener("click", async () => {
+
+        const username =
+            document.getElementById("loginUsername").value.trim();
+
+        const password =
+            document.getElementById("loginPassword").value;
+
+
+        if (username === "") {
+            showMessage("IDを入力してください。");
+            return;
+        }
+
+        if (password === "") {
+            showMessage("パスワードを入力してください。");
+            return;
+        }
+
+
+        const authEmail = makeAuthEmail(username);
+
+
+        const { error } =
+            await supabaseClient.auth.signInWithPassword({
+                email: authEmail,
+                password: password
+            });
+
+
+        if (error) {
+            console.error(error);
+            showMessage("IDまたはパスワードが違います。");
+            return;
+        }
+
+
+        // メインページへ
+        window.location.href = "index.html";
+
+    });
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>単語帳 - 単語テスト</title>
+
+    <link rel="icon" href="./icon-mark.png" type="image/png">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="label-picker.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f5f6f8;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+
+        header {
+            background: white;
+            padding: 18px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .user-area {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #username {
+            font-weight: bold;
+        }
+
+        button {
+            border: none;
+            border-radius: 6px;
+            padding: 9px 14px;
+            background: #333;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        #logoutButton {
+            background: #333;
+        }
+
+        main {
+            width: 90%;
+            max-width: 900px;
+            margin: 30px auto;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .card h2 {
+            margin-top: 0;
+        }
+
+        /* 単語帳一覧 */
+
+        .book-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .book-card {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .book-card:hover {
+            background: #f7f7f7;
+            border-color: #aaa;
+        }
+
+        .book-card h3 {
+            margin: 0 0 8px 0;
+        }
+
+        .book-card p {
+            margin: 0 0 15px 0;
+            color: #777;
+        }
+
+        /* 単語帳画面 */
+
+        #bookArea {
+            display: none;
+        }
+
+        .book-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .book-header h2 {
+            margin: 0;
+        }
+
+        #backButton {
+            background: white;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+
+        #commonwordSearch {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+            margin-bottom: 15px;
+        }
+
+        .control-area {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .word-count {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .word-list {
+            max-height: 550px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .word-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .word-row:last-child {
+            border-bottom: none;
+        }
+
+        .word-row:hover {
+            background: #fafafa;
+        }
+
+        .word-checkbox {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .english {
+            width: 180px;
+            font-weight: bold;
+        }
+
+        .japanese {
+            flex: 1;
+        }
+
+        .added {
+            color: #777;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #777;
+            padding: 30px;
+        }
+
+        #message {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        @media (max-width: 700px) {
+
+            header {
+                padding: 15px;
+            }
+
+            main {
+                width: 94%;
+            }
+
+            .book-list {
+                grid-template-columns: 1fr;
+            }
+
+            .english {
+                width: 100px;
+            }
+
+            .word-row {
+                gap: 8px;
+            }
+
+            .added {
+                display: none;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="photolex.css">
+</head>
+
+<body>
+
+<header>
+<a class="brand" href="index.html" aria-label="PhotoLex ホーム"><img src="assets/photolex-mark.png" alt=""><span>PhotoLex</span></a>
+
+    <h1>単語帳</h1>
+
+    <nav class="app-nav" aria-label="メインナビゲーション"><a href="index.html" data-page="index.html">ホーム</a><a href="mywords.html" data-page="mywords.html">自分の単語</a><a href="words.html" data-page="words.html">単語帳</a><a href="test_setting.html" data-page="test_setting.html">テスト</a></nav>
+<div class="user-area">
+        <span id="username">読み込み中...</span>
+        <button id="logoutButton">ログアウト</button>
+    </div>
+
+</header>
+
+
+<main>
+
+    <!-- ============================== -->
+    <!-- 単語帳一覧 -->
+    <!-- ============================== -->
+
+    <div class="card" id="bookListArea">
+
+        <h2>単語帳を選択</h2>
+        <p class="book-note">単語帳の単語は共有データから直接テストできます。自分のWordsに保存するのは、選んだ単語だけです。</p>
+
+        <div class="book-list">
+
+            <!-- LEAP -->
+
+            <div class="book-card" id="leapBook">
+
+                <h3>LEAP</h3>
+
+                <p>
+                    2300語
+                </p>
+
+                <button>
+                    開く
+                </button>
+
+            </div>
+
+
+            <!-- 鉄壁 -->
+
+            <div class="book-card" id="tekkyoBook">
+                <h3>鉄壁</h3>
+                <p>2176語</p>
+                <button>開く</button>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ============================== -->
+    <!-- 単語帳の中身 -->
+    <!-- ============================== -->
+
+    <div class="card" id="bookArea">
+
+        <div class="book-header">
+
+            <h2 id="bookTitle">
+                LEAP
+            </h2>
+
+            <button id="backButton">
+                ← 単語帳一覧へ
+            </button>
+
+        </div>
+
+
+        <input
+            type="text"
+            id="commonwordSearch"
+            placeholder="英語・日本語から検索"
+        >
+
+
+        <div class="control-area">
+
+            <button id="selectAllButton">
+                表示中をすべて選択
+            </button>
+
+            <button id="selectNotAddedButton" class="secondary" type="button">
+                未追加の単語をすべて選択
+            </button>
+
+            <button id="clearSelectionButton">
+                選択をすべて解除
+            </button>
+
+            <button id="addSelectedButton">
+                選択した単語だけを自分の単語に保存
+            </button>
+            <button id="useSelectedForTestButton" class="secondary" type="button">
+                選択した単語だけでテスト（保存しない）
+            </button>
+
+        </div>
+        <div id="selectedWordCount" class="status" aria-live="polite">0語選択中</div>
+        <div class="label-picker import-label-picker">
+            <label for="importLabelSelect">保存する単語のラベル</label>
+            <select id="importLabelSelect"><option value="">ラベルなし</option></select>
+            <input id="newImportLabel" type="text" placeholder="新しいラベル名" style="display:none" aria-label="新しいラベル名">
+            <p class="label-picker-help">チェックした単語だけを保存できます。保存せずにテストへ進むこともできます。</p>
+        </div>
+
+        <div id="wordCount" class="word-count">
+            読み込み中...
+        </div>
+
+
+        <div id="commonwordsArea">
+
+            <p class="empty-message">
+                単語を読み込んでいます...
+            </p>
+
+        </div>
+
+
+        <div id="message"></div>
+
+    </div>
+
+</main>
+
+
+<script>
+
+// ==========================================
+// Supabase設定
+// ==========================================
+
+const SUPABASE_URL =
+    "Supabase_url";
+
+const SUPABASE_ANON_KEY =
+    "●●";
+
+const supabaseClient =
+    supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+    );
+
+
+// ==========================================
+// HTML要素
+// ==========================================
+
+const usernameElement =
+    document.getElementById("username");
+
+const bookListArea =
+    document.getElementById("bookListArea");
+
+const bookArea =
+    document.getElementById("bookArea");
+
+const bookTitle =
+    document.getElementById("bookTitle");
+
+const commonwordSearch =
+    document.getElementById("commonwordSearch");
+
+const commonwordsArea =
+    document.getElementById("commonwordsArea");
+
+const wordCount =
+    document.getElementById("wordCount");
+
+const selectedWordCount =
+    document.getElementById("selectedWordCount");
+
+const message =
+    document.getElementById("message");
+const importLabelSelect = document.getElementById("importLabelSelect");
+const newImportLabel = document.getElementById("newImportLabel");
+PhotoLexLabels.attach(importLabelSelect, newImportLabel);
+
+
+// ==========================================
+// 現在のユーザー
+// ==========================================
+
+let currentUserInformation = null;
+
+
+// ==========================================
+// 単語帳データ
+// ==========================================
+
+let commonwords = [];
+
+let selectedCommonwordIds = new Set();
+
+
+// 自分がすでに持っている単語
+let myWords = [];
+
+
+// ==========================================
+// ユーザー情報を取得
+// ==========================================
+
+async function loadUser() {
+
+    const {
+        data: { user },
+        error
+    } = await supabaseClient.auth.getUser();
+
+
+    if (error || !user) {
+
+        window.location.href = "login.html";
+
+        return null;
+    }
+
+
+    const {
+        data,
+        error: userInfoError
+    } = await supabaseClient
+        .from("user_information")
+        .select("id, user_name, auth_user_id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+
+    if (userInfoError) {
+
+        console.error(userInfoError);
+
+        message.textContent =
+            "ユーザー情報の取得に失敗しました。";
+
+        return null;
+    }
+
+
+    usernameElement.textContent =
+        data.user_name;
+
+
+    currentUserInformation = data;
+
+
+    return data;
+}
+
+
+// ==========================================
+// 自分の単語を取得
+// ==========================================
+
+async function loadMyWords() {
+    if (!currentUserInformation) return;
+
+    let allWords = [];
+    let from = 0;
+    const pageSize = 1000;
+
+    while (true) {
+        const { data, error } = await supabaseClient
+            .from("Words")
+            .select("id, English, Japanese, label")
+            .eq("user_id", currentUserInformation.id)
+            .range(from, from + pageSize - 1);
+
+        if (error) {
+            console.error(error);
+            message.textContent = "自分の単語の取得に失敗しました。";
+            return;
+        }
+
+        allWords = allWords.concat(data || []);
+
+        if (!data || data.length < pageSize) {
+            break;
+        }
+
+        from += pageSize;
+    }
+
+    myWords = allWords;
+    const personalLabels = [...new Set(myWords.map(word => String(word.label || "").trim()).filter(Boolean))];
+    PhotoLexLabels.remember(personalLabels, currentUserInformation.id);
+    PhotoLexLabels.populate(importLabelSelect, personalLabels);
+}
+
+
+// ==========================================
+// LEAPを開く
+// ==========================================
+
+async function openBook(bookName, bookLabel) {
+    bookListArea.style.display = "none";
+    bookArea.style.display = "block";
+
+    bookTitle.textContent = bookName;
+
+    selectedCommonwordIds.clear();
+    commonwordSearch.value = "";
+    message.textContent = "";
+
+    await loadMyWords();
+    await loadCommonwords(bookLabel);
+}
+
+document.getElementById("leapBook").addEventListener("click", () => {
+    openBook("LEAP", "leap");
+});
+
+document.getElementById("tekkyoBook").addEventListener("click", () => {
+    openBook("鉄壁", "tekkyo");
+});
+
+
+// ==========================================
+// 単語帳一覧へ戻る
+// ==========================================
+
+document
+    .getElementById("backButton")
+    .addEventListener("click", () => {
+
+        bookArea.style.display = "none";
+
+        bookListArea.style.display = "block";
+
+        selectedCommonwordIds.clear();
+
+        commonwordSearch.value = "";
+
+        message.textContent = "";
+
+    });
+
+
+// ==========================================
+// LEAP単語を取得
+// ==========================================
+
+async function loadCommonwords(bookLabel) {
+    const bookName = bookLabel === "leap" ? "LEAP" : "鉄壁";
+
+    commonwordsArea.innerHTML =
+        `<p class="empty-message">${bookName}の単語を読み込んでいます...</p>`;
+
+    let allWords = [];
+    let from = 0;
+    const pageSize = 1000;
+
+    while (true) {
+        const { data, error } = await supabaseClient
+            .from("commonwords")
+            .select("id, English, Japanese, label")
+            .eq("label", bookLabel)
+            .order("id", { ascending: true })
+            .range(from, from + pageSize - 1);
+
+        if (error) {
+            console.error(error);
+
+            commonwordsArea.innerHTML =
+                `<p class="empty-message">${bookName}の単語を取得できませんでした。</p>`;
+
+            return;
+        }
+
+        allWords = allWords.concat(data || []);
+
+        if (!data || data.length < pageSize) {
+            break;
+        }
+
+        from += pageSize;
+    }
+
+    commonwords = allWords;
+
+    renderCommonwords();
+}
+
+
+// ==========================================
+// すでに追加済みか確認
+// ==========================================
+
+function isAlreadyAdded(word) {
+
+    return myWords.some(myWord =>
+
+        String(myWord.English).toLowerCase() ===
+        String(word.English).toLowerCase()
+
+    );
+
+}
+
+
+// ==========================================
+// 単語を表示
+// ==========================================
+
+function renderCommonwords() {
+
+    const search =
+        commonwordSearch.value
+            .trim()
+            .toLowerCase();
+
+
+    const filteredWords =
+        commonwords.filter(word => {
+
+            const english =
+                String(
+                    word.English || ""
+                ).toLowerCase();
+
+            const japanese =
+                String(
+                    word.Japanese || ""
+                ).toLowerCase();
+
+
+            return (
+                english.includes(search) ||
+                japanese.includes(search)
+            );
+
+        });
+
+    selectedWordCount.textContent = `${selectedCommonwordIds.size}語選択中`;
+
+
+    wordCount.textContent =
+        `${filteredWords.length}語を表示中 / 全${commonwords.length}語`;
+
+
+    if (filteredWords.length === 0) {
+
+        commonwordsArea.innerHTML =
+            '<p class="empty-message">該当する単語がありません。</p>';
+
+        return;
+    }
+
+
+    let html = `
+        <div class="word-list">
+    `;
+
+
+    for (const word of filteredWords) {
+
+        const checked =
+            selectedCommonwordIds.has(word.id)
+                ? "checked"
+                : "";
+
+
+        const alreadyAdded =
+            isAlreadyAdded(word);
+
+
+        html += `
+
+            <div class="word-row">
+
+                <input
+                    type="checkbox"
+                    class="word-checkbox"
+                    data-id="${word.id}"
+                    ${checked}
+                >
+
+                <span class="english">
+                    ${escapeHtml(word.English)}
+                </span>
+
+                <span class="japanese">
+                    ${escapeHtml(word.Japanese)}
+                </span>
+
+                ${
+                    alreadyAdded
+                        ? `<span class="added">追加済み</span>`
+                        : ""
+                }
+
+            </div>
+
+        `;
+
+    }
+
+
+    html += `
+        </div>
+    `;
+
+
+    commonwordsArea.innerHTML = html;
+
+
+    // ======================================
+    // チェックボックス
+    // ======================================
+
+    document
+        .querySelectorAll(".word-checkbox")
+        .forEach(checkbox => {
+
+            checkbox.addEventListener(
+                "change",
+                () => {
+
+                    const id =
+                        Number(
+                            checkbox.dataset.id
+                        );
+
+
+                    if (checkbox.checked) {
+
+                        selectedCommonwordIds.add(id);
+
+                    } else {
+
+                        selectedCommonwordIds.delete(id);
+
+                    }
+
+                    selectedWordCount.textContent = `${selectedCommonwordIds.size}語選択中`;
+
+                }
+            );
+
+        });
+
+}
+
+
+// ==========================================
+// 検索
+// ==========================================
+
+commonwordSearch.addEventListener(
+    "input",
+    renderCommonwords
+);
+
+
+// ==========================================
+// 表示中をすべて選択
+// ==========================================
+
+document
+    .getElementById("selectAllButton")
+    .addEventListener("click", () => {
+
+        const search =
+            commonwordSearch.value
+                .trim()
+                .toLowerCase();
+
+
+        const filteredWords =
+            commonwords.filter(word => {
+
+                const english =
+                    String(
+                        word.English || ""
+                    ).toLowerCase();
+
+                const japanese =
+                    String(
+                        word.Japanese || ""
+                    ).toLowerCase();
+
+
+                return (
+                    english.includes(search) ||
+                    japanese.includes(search)
+                );
+
+            });
+
+
+        for (const word of filteredWords) {
+            selectedCommonwordIds.add(word.id);
+        }
+
+
+        renderCommonwords();
+
+
+        message.textContent =
+            `表示中の${filteredWords.length}語を選択しました（追加済みの単語も含みます）。`;
+
+    });
+
+document
+    .getElementById("selectNotAddedButton")
+    .addEventListener("click", () => {
+        selectedCommonwordIds.clear();
+
+        const notAddedWords = commonwords.filter(word => !isAlreadyAdded(word));
+        notAddedWords.forEach(word => selectedCommonwordIds.add(word.id));
+
+        renderCommonwords();
+        message.textContent = `未追加の${notAddedWords.length}語を選択しました。`;
+    });
+
+
+// ==========================================
+// 選択をすべて解除
+// ==========================================
+
+document
+    .getElementById("clearSelectionButton")
+    .addEventListener("click", () => {
+
+        selectedCommonwordIds.clear();
+
+        renderCommonwords();
+
+        message.textContent =
+            "選択をすべて解除しました。";
+
+    });
+
+
+newImportLabel.addEventListener("keydown", event => {
+    if (event.key === "Enter") document.getElementById("addSelectedButton").click();
+});
+
+// Selected commonwords can go straight to a test without adding rows to Words.
+document.getElementById("useSelectedForTestButton").addEventListener("click", () => {
+    const selected = commonwords.filter(word => selectedCommonwordIds.has(word.id));
+    if (!selected.length) {
+        message.textContent = "テストに使う単語を選択してください。";
+        return;
+    }
+    localStorage.setItem("selectedTestWords", JSON.stringify(selected.map(word => ({
+        id: Number(word.id), English: word.English, Japanese: word.Japanese,
+        label: word.label || "", word_type: "common"
+    }))));
+    window.location.href = "test_setting.html?selected=1";
+});
+
+// ==========================================
+// 選択した単語を一括追加
+// ==========================================
+
+document
+    .getElementById("addSelectedButton")
+    .addEventListener(
+        "click",
+        async () => {
+
+            if (
+                selectedCommonwordIds.size === 0
+            ) {
+
+                message.textContent =
+                    "追加する単語を選択してください。";
+
+                return;
+            }
+
+
+            if (!currentUserInformation) {
+
+                message.textContent =
+                    "ユーザー情報を取得できていません。";
+
+                return;
+            }
+
+
+            const selectedWords =
+                commonwords.filter(word =>
+                    selectedCommonwordIds.has(
+                        word.id
+                    )
+                );
+
+            const label = PhotoLexLabels.value(importLabelSelect, newImportLabel);
+            if (importLabelSelect.value === PhotoLexLabels.CREATE_VALUE && !label) {
+                message.textContent = "新しいラベル名を入力してください。";
+                newImportLabel.focus();
+                return;
+            }
+
+
+
+            const wordsToInsert =
+                selectedWords.filter(word =>
+                    !isAlreadyAdded(word)
+                );
+
+
+            if (
+                wordsToInsert.length === 0
+            ) {
+
+                message.textContent =
+                    "選択した単語はすべて追加済みです。";
+
+                selectedCommonwordIds.clear();
+
+                renderCommonwords();
+
+                return;
+            }
+
+
+            const button =
+                document.getElementById(
+                    "addSelectedButton"
+                );
+
+
+            button.disabled = true;
+
+            button.textContent =
+                "追加中...";
+
+
+            message.textContent =
+                `${wordsToInsert.length}語を追加しています...`;
+
+
+            const insertData =
+                wordsToInsert.map(word => ({
+
+                    English: word.English,
+
+                    Japanese: word.Japanese,
+
+                    label: label || null,
+
+                    user_id:
+                        currentUserInformation.id
+
+                }));
+
+
+            const {
+                error
+            } = await supabaseClient
+                .from("Words")
+                .insert(insertData);
+
+
+            if (error) {
+
+                console.error(error);
+
+                message.textContent =
+                    "単語の追加に失敗しました。";
+
+                button.disabled = false;
+
+                button.textContent =
+                    "選択した単語だけを自分の単語に保存";
+
+                return;
+            }
+
+
+            const addedCount =
+                wordsToInsert.length;
+
+
+            selectedCommonwordIds.clear();
+
+
+            await loadMyWords();
+            const savedLabels = [...new Set(myWords.map(word => String(word.label || "").trim()).filter(Boolean))];
+            PhotoLexLabels.populate(importLabelSelect, savedLabels, label);
+            newImportLabel.value = "";
+
+            renderCommonwords();
+
+
+            message.textContent =
+                `${addedCount}語を追加しました。`;
+
+
+            button.disabled = false;
+
+            button.textContent =
+                "選択した単語だけを自分の単語に保存";
+
+        }
+    );
+
+
+// ==========================================
+// HTMLエスケープ
+// ==========================================
+
+function escapeHtml(value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+
+        return "";
+
+    }
+
+
+    return String(value)
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+// ==========================================
+// ログアウト
+// ==========================================
+
+document
+    .getElementById("logoutButton")
+    .addEventListener(
+        "click",
+        async () => {
+
+            const {
+                error
+            } =
+                await supabaseClient.auth.signOut();
+
+
+            if (error) {
+
+                console.error(error);
+
+                message.textContent =
+                    "ログアウトに失敗しました。";
+
+                return;
+            }
+
+
+            window.location.href =
+                "login.html";
+
+        }
+    );
+
+
+// ==========================================
+// 初期化
+// ==========================================
+
+async function init() {
+
+    const userInformation =
+        await loadUser();
+
+
+    if (!userInformation) {
+
+        return;
+
+    }
+
+}
+
+
+init();
+
+</script>
+
+<script>document.querySelectorAll(".app-nav a").forEach(a=>{if(a.dataset.page==="words.html"){a.classList.add("active");a.setAttribute("aria-current","page")}});</script>
+</body>
+</html>
