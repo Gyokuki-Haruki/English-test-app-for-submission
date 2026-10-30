@@ -7,6 +7,7 @@
     <title>ログイン</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="profile-ui.js"></script>
 
     <style>
         * {
@@ -185,8 +186,8 @@
     // Supabase設定
     // ==========================================
 
-    const SUPABASE_URL = "Supabase_url";
-    const SUPABASE_ANON_KEY = "●●";
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 
     const supabaseClient = supabase.createClient(
         SUPABASE_URL,
@@ -243,7 +244,7 @@
     // ==========================================
 
     function makeAuthEmail(username) {
-        return username.toLowerCase() + "@pghgyvsvifgbnksaflhd.supabase.co";
+        return username.toLowerCase() + "@" + new URL(SUPABASE_URL).hostname;
     }
 
 
@@ -371,7 +372,7 @@ document.getElementById("signupButton").addEventListener("click", async () => {
         const authEmail = makeAuthEmail(username);
 
 
-        const { error } =
+        const { data: signInData, error } =
             await supabaseClient.auth.signInWithPassword({
                 email: authEmail,
                 password: password
@@ -384,6 +385,8 @@ document.getElementById("signupButton").addEventListener("click", async () => {
             return;
         }
 
+
+        PhotoLexProfile.startSession(signInData.user);
 
         // メインページへ
         window.location.href = "index.html";

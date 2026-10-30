@@ -1,127 +1,116 @@
 <!doctype html>
 <html lang="ja">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width,initial-scale=1.0">
-        <title>テスト設定 - 単語テスト</title>
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-        <script src="label-picker.js"></script>
-        <link rel="icon" href="./icon-mark.png" type="image/png">
-        <style>
-        *{box-sizing:border-box}
-        body{margin:0;background:#f5f6f8;font-family:Arial,sans-serif;color:#333}
-        header{background:#fff;padding:18px 30px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-        header h1{margin:0;font-size:22px}
-        .user-area{display:flex;align-items:center;gap:12px}
-        #username{font-weight:bold}
-        button{border:0;border-radius:6px;padding:9px 14px;background:#333;color:#fff;cursor:pointer;font-size:14px}
-        button:hover{background:#555}
-        button:disabled{background:#999;cursor:not-allowed}
-        .secondary{background:#fff;color:#333;border:1px solid #ccc}
-        main{width:94%;max-width:760px;margin:30px auto}
-        .card{background:#fff;padding:25px;border-radius:12px;margin-bottom:20px;box-shadow:0 3px 12px rgba(0,0,0,.06)}
-        .card h2{margin-top:0}
-        .field{margin:20px 0}
-        .field label{display:block;font-weight:bold;margin-bottom:8px}
-        select,input[type=number]{width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;font-size:15px}
-        .range-row{display:flex;gap:10px;align-items:center}
-        .range-row input{flex:1}
-        .radio-group{display:flex;gap:10px;flex-wrap:wrap}
-        .radio-group label{font-weight:normal;display:flex;align-items:center;gap:7px;border:1px solid #d5d5d5;border-radius:8px;padding:10px 14px;cursor:pointer;background:#fff}
-        .radio-group label:has(input:checked){background:#f1f1f1;border-color:#333}
-        .radio-group input{margin:0}
-        .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:25px}
-        .status{color:#666;margin-top:8px}
-        .field-label{font-weight:bold;margin-bottom:8px}
-        .label-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}
-        .label-option{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #d5d5d5;border-radius:8px;background:#fff;cursor:pointer}
-        .label-option input{width:18px;height:18px;margin:0;accent-color:#1769d2}
-        .question-count-control{display:flex;align-items:center;gap:12px}
-        .question-count-control input{flex:1;min-width:0}
-        .question-count-control .status{margin:0;white-space:nowrap}
-        .error{color:#b33}
-        .hidden{display:none}
-        </style>
-        <link rel="stylesheet" href="photolex.css">
-    </head>
-    <body>
-        <header>
-            <a class="brand" href="index.html" aria-label="PhotoLex ホーム">
-                <img src="assets/photolex-mark.png" alt="">
-                <span>PhotoLex</span>
-            </a>
-            <h1>テスト設定</h1>
-            <nav class="app-nav" aria-label="メインナビゲーション">
-                <a href="index.html" data-page="index.html">ホーム</a>
-                <a href="mywords.html" data-page="mywords.html">自分の単語</a>
-                <a href="words.html" data-page="words.html">単語帳</a>
-                <a href="test_setting.html" data-page="test_setting.html">テスト</a>
-            </nav>
-            <div class="user-area">
-                <span id="username">読み込み中...</span>
-                <button id="logoutButton">ログアウト</button>
-            </div>
-        </header>
-        <main>
-            <div class="card">
-                <h2>テストを作る</h2>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>テスト設定 - 単語テスト</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="profile-ui.js"></script>
+<script src="label-picker.js"></script>
+<link rel="icon" href="./icon-mark.png" type="image/png">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f6f8;font-family:Arial,sans-serif;color:#333}
+header{background:#fff;padding:18px 30px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+header h1{margin:0;font-size:22px}
+.user-area{display:flex;align-items:center;gap:12px}
+#username{font-weight:bold}
+button{border:0;border-radius:6px;padding:9px 14px;background:#333;color:#fff;cursor:pointer;font-size:14px}
+button:hover{background:#555}
+button:disabled{background:#999;cursor:not-allowed}
+.secondary{background:#fff;color:#333;border:1px solid #ccc}
+main{width:94%;max-width:760px;margin:30px auto}
+.card{background:#fff;padding:25px;border-radius:12px;margin-bottom:20px;box-shadow:0 3px 12px rgba(0,0,0,.06)}
+.card h2{margin-top:0}
+.field{margin:20px 0}
+.field label{display:block;font-weight:bold;margin-bottom:8px}
+select,input[type=number]{width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;font-size:15px}
+.range-row{display:flex;gap:10px;align-items:center}
+.range-row input{flex:1}
+.radio-group{display:flex;gap:10px;flex-wrap:wrap}
+.radio-group label{font-weight:normal;display:flex;align-items:center;gap:7px;border:1px solid #d5d5d5;border-radius:8px;padding:10px 14px;cursor:pointer;background:#fff}
+.radio-group label:has(input:checked){background:#f1f1f1;border-color:#333}
+.radio-group input{margin:0}
+.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:25px}
+.status{color:#666;margin-top:8px}
+.field-label{font-weight:bold;margin-bottom:8px}
+.label-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}
+.label-option{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #d5d5d5;border-radius:8px;background:#fff;cursor:pointer}
+.label-option input{width:18px;height:18px;margin:0;accent-color:#1769d2}
+.question-count-control{display:flex;align-items:center;gap:12px}
+.question-count-control input{flex:1;min-width:0}
+.question-count-control .status{margin:0;white-space:nowrap}
+.error{color:#b33}
+.hidden{display:none}
+</style>
+    <link rel="stylesheet" href="photolex.css">
+</head>
+<body>
+<header>
+<a class="brand" href="index.html" aria-label="PhotoLex ホーム"><img src="assets/photolex-mark.png" alt=""><span>PhotoLex</span></a>
+<h1>テスト設定</h1>
+<nav class="app-nav" aria-label="メインナビゲーション"><a href="index.html" data-page="index.html">ホーム</a><a href="mywords.html" data-page="mywords.html">自分の単語</a><a href="words.html" data-page="words.html">単語帳</a><a href="test_setting.html" data-page="test_setting.html">テスト</a></nav>
+<div class="user-area">
+<a class="profile-link" href="mypage.html" aria-label="マイページ"><span id="userAvatar" class="user-avatar" data-profile-avatar aria-hidden="true">📘</span><span id="username">読み込み中...</span></a>
+<button id="logoutButton">ログアウト</button>
+</div>
+</header>
+<main>
+<div class="card">
+<h2>テストを作る</h2>
 
-                <div class="field" id="sourceField">
-                    <label for="sourceSelect">出題元</label>
-                    <select id="sourceSelect">
-                        <option value="myword">自分の単語</option>
-                        <option value="leap">LEAP</option>
-                        <option value="tekkyo">鉄壁</option>
-                    </select>
-                </div>
+<div class="field" id="sourceField">
+<label for="sourceSelect">出題元</label>
+<select id="sourceSelect">
+<option value="myword">自分の単語</option>
+<option value="leap">LEAP</option>
+<option value="tekkyo">鉄壁</option>
+</select>
+</div>
 
-                <div class="field" id="labelField">
-                    <div class="field-label">ラベル（複数選択できます）</div>
-                    <div id="labelOptions" class="label-options" role="group" aria-label="出題するラベル"></div>
-                    <div id="labelStatus" class="status"></div>
-                </div>
+<div class="field" id="labelField">
+<div class="field-label">ラベル（複数選択できます）</div>
+<div id="labelOptions" class="label-options" role="group" aria-label="出題するラベル"></div>
+<div id="labelStatus" class="status"></div>
+</div>
 
-                <div class="field" id="rangeField">
-                    <label>範囲（単語番号）</label>
-                    <div class="range-row">
-                        <input id="startNumber" type="number" min="1" value="1">
-                        <span>〜</span>
-                        <input id="endNumber" type="number" min="1" value="300" aria-label="範囲の末尾">
-                    </div>
-                    <div id="rangeStatus" class="status">現在はデータベース上の掲載順を使います。</div>
-                </div>
+<div class="field" id="rangeField">
+<label>範囲（単語番号）</label>
+<div class="range-row">
+<input id="startNumber" type="number" min="1" value="1">
+<span>〜</span>
+<input id="endNumber" type="number" min="1" value="300" aria-label="範囲の末尾">
+</div>
+<div id="rangeStatus" class="status">現在はデータベース上の掲載順を使います。</div>
+</div>
 
-                <div class="field">
-                    <label>出題モード</label>
-                    <div class="radio-group">
-                        <label>
-                            <input type="radio" name="mode" value="random" checked> ランダム
-                        </label>
-                        <label>
-                            <input type="radio" name="mode" value="mistake"> 間違え率優先
-                        </label>
-                    </div>
-                    <div id="modeStatus" class="status">範囲内からランダムに出題します。</div>
-                </div>
+<div class="field">
+<label>出題モード</label>
+<div class="radio-group">
+<label><input type="radio" name="mode" value="random" checked> ランダム</label>
+<label><input type="radio" name="mode" value="mistake"> 間違え率優先</label>
+</div>
+<div id="modeStatus" class="status">範囲内からランダムに出題します。</div>
+</div>
 
-                <div class="field">
-                    <label for="questionCount">問題数</label>
-                    <div class="question-count-control">
-                        <input id="questionCount" type="number" min="1" step="1" value="10" aria-label="問題数">
-                        <span id="questionCountMax" class="status">最大 10 問</span>
-                    </div>
-                </div>
+<div class="field">
+<label for="questionCount">問題数</label>
+<div class="question-count-control">
+<input id="questionCount" type="number" min="1" step="1" value="10" aria-label="問題数">
+<span id="questionCountMax" class="status">最大 10 問</span>
+</div>
+</div>
 
-                <div class="actions">
-                    <button id="backButton" class="secondary">戻る</button>
-                    <button id="startButton">テスト開始</button>
-                </div>
-                <div id="message" class="status"></div>
-            </div>
-        </main>
+<div class="actions">
+<button id="backButton" class="secondary">戻る</button>
+<button id="startButton">テスト開始</button>
+</div>
+<div id="message" class="status"></div>
+</div>
+</main>
 <script>
-const SUPABASE_URL="Supabase_url";
-const SUPABASE_ANON_KEY="●●";
+const SUPABASE_URL="YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY";
 const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
 let currentUserInformation=null;
@@ -167,20 +156,13 @@ function setupSelectedOnlyPage(){
 }
 
 async function loadUser(){
-    const {data:{user},error}=await supabaseClient.auth.getUser();
-    if(error||!user){location.href="login.html";return false}
-    const {data,error:e}=await supabaseClient
-        .from("user_information")
-        .select("id,user_name,auth_user_id")
-        .eq("auth_user_id",user.id)
-        .single();
-    if(e){
-        console.error(e);
-        $("message").textContent="ユーザー情報の取得に失敗しました。";
-        return false;
-    }
+    const user=await PhotoLexProfile.getCurrentUser(supabaseClient);
+    if(!user){location.href="login.html";return false}
+    const {data,error:e}=await PhotoLexProfile.getUserInformation(supabaseClient,user);
+    if(e){console.error(e);$("message").textContent="ユーザー情報の取得に失敗しました。";return false}
     currentUserInformation=data;
     $("username").textContent=data.user_name;
+    await PhotoLexProfile.paint(supabaseClient,user);
     return true;
 }
 

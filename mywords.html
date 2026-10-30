@@ -6,7 +6,8 @@
             <title>自分の単語 - 単語テスト</title>
             <link rel="icon" href="./icon-mark.png" type="image/png">
             <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-            <script src="label-picker.js"></script>
+<script src="profile-ui.js"></script>
+<script src="label-picker.js"></script>
             <style>
 *{box-sizing:border-box}body{margin:0;background:#f5f6f8;font-family:Arial,sans-serif;color:#333}
 header{background:#fff;padding:18px 30px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px #00000014}
@@ -25,76 +26,71 @@ th,td{padding:11px 12px;border-bottom:1px solid #eee;text-align:left;vertical-al
 @media(max-width:700px){header{padding:15px}main{width:94%}.card{padding:18px}.user-area{gap:8px}}
             </style>
             <link rel="stylesheet" href="photolex.css">
-        </head>
-        <body>
-            <header>
-                <a class="brand" href="index.html" aria-label="PhotoLex ホーム"><img src="assets/photolex-mark.png" alt=""><span>PhotoLex</span></a>
-                <h1>自分の単語</h1>
-                <nav class="app-nav" aria-label="メインナビゲーション">
-                    <a href="index.html" data-page="index.html">ホーム</a>
-                    <a href="mywords.html" data-page="mywords.html">自分の単語</a>
-                    <a href="words.html" data-page="words.html">単語帳</a>
-                    <a href="test_setting.html" data-page="test_setting.html">テスト</a>
-                </nav>
-                <div class="user-area">
-                    <span id="username">読み込み中...</span>
-                    <button id="logoutButton">ログアウト</button>
+</head>
+    <body>
+        <header>
+<a class="brand" href="index.html" aria-label="PhotoLex ホーム"><img src="assets/photolex-mark.png" alt=""><span>PhotoLex</span></a>
+            <h1>自分の単語</h1>
+            <nav class="app-nav" aria-label="メインナビゲーション"><a href="index.html" data-page="index.html">ホーム</a><a href="mywords.html" data-page="mywords.html">自分の単語</a><a href="words.html" data-page="words.html">単語帳</a><a href="test_setting.html" data-page="test_setting.html">テスト</a></nav>
+<div class="user-area">
+                <a class="profile-link" href="mypage.html" aria-label="マイページ"><span id="userAvatar" class="user-avatar" data-profile-avatar aria-hidden="true">📘</span><span id="username">読み込み中...</span></a>
+                <button id="logoutButton">ログアウト</button>
+            </div>
+        </header>
+        <main>
+            <div class="card">
+                <div class="toolbar">
+                    <button id="homeButton" class="secondary">← ホームへ</button>
                 </div>
-            </header>
-            <main>
-                <div class="card">
-                    <div class="toolbar">
-                        <button id="homeButton" class="secondary">← ホームへ</button>
-                    </div>
-                    <h2>ラベル</h2>
-                    <div id="labelList">
-                        <p class="empty">読み込んでいます...</p>
-                    </div>
-                </div>
-                <div class="card">
-                    <h2 id="currentLabelTitle">すべての単語</h2>
-                    <input id="searchInput" type="text" placeholder="英語・日本語から検索">
-                    <div class="toolbar">
-                        <button id="selectPageButton">表示中をすべて選択</button>
-                        <button id="clearSelectionButton" class="secondary">選択をすべて解除</button>
-                        <button id="bulkDeleteButton" class="danger">選択した単語を削除</button>
-                        <button id="makeTestButton">選択した単語でテストを作る</button>
-                    </div>
-                    <div id="selectionStatus" class="status">0語選択中</div>
-                    <div id="wordArea">
-                        <p class="empty">単語を読み込んでいます...</p>
-                    </div>
-                    <div class="pagination">
-                        <button id="prevButton" class="secondary">← 前へ</button>
-                        <span id="pageInfo" class="page-info"></span>
-                        <button id="nextButton" class="secondary">次へ →</button>
-                    </div>
-                    <div id="message">
-
-                    </div>
-                </div>
-            </main>
-            <div id="editBackdrop" class="modal-backdrop">
-                <div class="modal">
-                    <h2>単語を編集</h2>
-                    <label>英語</label>
-                    <input id="editEnglish" type="text">
-                    <label>日本語</label>
-                    <input id="editJapanese" type="text">
-                    <label>ラベル</label>
-                    <div class="label-picker">
-                        <select id="editLabel" aria-label="既存ラベルを選択"><option value="">ラベルなし</option></select>
-                        <input id="newEditLabel" type="text" placeholder="新しいラベル名" style="display:none" aria-label="新しいラベル名">
-                    </div>
-                    <div class="modal-actions">
-                        <button id="cancelEditButton" class="secondary">キャンセル</button>
-                        <button id="saveEditButton">保存</button>
-                    </div>
+                <h2>ラベル</h2>
+                <div id="labelList">
+                    <p class="empty">読み込んでいます...</p>
                 </div>
             </div>
+            <div class="card">
+                <h2 id="currentLabelTitle">すべての単語</h2>
+                <input id="searchInput" type="text" placeholder="英語・日本語から検索">
+                <div class="toolbar">
+                    <button id="selectPageButton">表示中をすべて選択</button>
+                    <button id="clearSelectionButton" class="secondary">選択をすべて解除</button>
+                    <button id="bulkDeleteButton" class="danger">選択した単語を削除</button>
+                    <button id="makeTestButton">選択した単語でテストを作る</button>
+                </div>
+                <div id="selectionStatus" class="status">0語選択中</div>
+                <div id="wordArea">
+                    <p class="empty">単語を読み込んでいます...</p>
+                </div>
+                <div class="pagination">
+                    <button id="prevButton" class="secondary">← 前へ</button>
+                    <span id="pageInfo" class="page-info"></span>
+                    <button id="nextButton" class="secondary">次へ →</button>
+                </div>
+                <div id="message">
+
+                </div>
+            </div>
+        </main>
+        <div id="editBackdrop" class="modal-backdrop">
+            <div class="modal">
+                <h2>単語を編集</h2>
+                <label>英語</label>
+                <input id="editEnglish" type="text">
+                <label>日本語</label>
+                <input id="editJapanese" type="text">
+                <label>ラベル</label>
+                <div class="label-picker">
+                    <select id="editLabel" aria-label="既存ラベルを選択"><option value="">ラベルなし</option></select>
+                    <input id="newEditLabel" type="text" placeholder="新しいラベル名" style="display:none" aria-label="新しいラベル名">
+                </div>
+                <div class="modal-actions">
+                    <button id="cancelEditButton" class="secondary">キャンセル</button>
+                    <button id="saveEditButton">保存</button>
+                </div>
+            </div>
+        </div>
         <script>
-            const SUPABASE_URL="Supabase_url";
-            const SUPABASE_ANON_KEY="●●";
+            const SUPABASE_URL="YOUR_SUPABASE_URL";
+            const SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY";
             const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
             const usernameElement=document.getElementById("username"),labelList=document.getElementById("labelList"),titleEl=document.getElementById("currentLabelTitle"),searchInput=document.getElementById("searchInput"),wordArea=document.getElementById("wordArea"),selectionStatus=document.getElementById("selectionStatus"),pageInfo=document.getElementById("pageInfo"),prevButton=document.getElementById("prevButton"),nextButton=document.getElementById("nextButton"),message=document.getElementById("message"),editLabel=document.getElementById("editLabel"),newEditLabel=document.getElementById("newEditLabel");
             const bulkDeleteButton=document.getElementById("bulkDeleteButton");
@@ -102,14 +98,12 @@ th,td{padding:11px 12px;border-bottom:1px solid #eee;text-align:left;vertical-al
             let currentUserInformation=null,myWords=[],selectedIds=new Set(),currentLabel=null,currentPage=1,editingWordId=null;
             const pageSize=100;
             async function loadUser(){
-                const {data:{user},error}=await supabaseClient.auth.getUser();if(error||!user){location.href="login.html";return null}
-            const {data,error:e}=await supabaseClient.from("user_information").select("id,user_name,auth_user_id").eq("auth_user_id",user.id).single();
-            if(e){
-                console.error(e);
-                message.textContent="ユーザー情報の取得に失敗しました。";
-                return null
-            } 
-            usernameElement.textContent=data.user_name;currentUserInformation=data;return data}
+                const user=await PhotoLexProfile.getCurrentUser(supabaseClient);if(!user){location.href="login.html";return null}
+                const {data,error:e}=await PhotoLexProfile.getUserInformation(supabaseClient,user);
+                if(e){console.error(e);message.textContent="ユーザー情報の取得に失敗しました。";return null}
+                usernameElement.textContent=data.user_name;await PhotoLexProfile.paint(supabaseClient,user);currentUserInformation=data;return data
+            }
+
             async function loadMyWords(){let all=[],from=0;while(true){const {data,error}=await supabaseClient.from("Words").select("id,English,Japanese,label,created_at").eq("user_id",currentUserInformation.id).order("id",{ascending:true}).range(from,from+999);if(error){console.error(error);wordArea.innerHTML='<p class="empty">自分の単語の取得に失敗しました。</p>';return false}all=all.concat(data||[]);if(!data||data.length<1000)break;from+=1000}myWords=all;return true}
             function norm(x){return x==null?"":String(x).trim()}
             function escapeHtml(x){return String(x??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
@@ -194,6 +188,6 @@ th,td{padding:11px 12px;border-bottom:1px solid #eee;text-align:left;vertical-al
             logoutButton.onclick=async()=>{const {error}=await supabaseClient.auth.signOut();if(error){message.textContent="ログアウトに失敗しました。";return}location.href="login.html"};
             (async()=>{if(await loadUser()&&await loadMyWords()){renderLabels();renderWords()}})();
         </script>
-        <script>document.querySelectorAll(".app-nav a").forEach(a=>{if(a.dataset.page==="mywords.html"){a.classList.add("active");a.setAttribute("aria-current","page")}});</script>
-    </body>
+    <script>document.querySelectorAll(".app-nav a").forEach(a=>{if(a.dataset.page==="mywords.html"){a.classList.add("active");a.setAttribute("aria-current","page")}});</script>
+</body>
 </html>

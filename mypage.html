@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#102846">
+<title>マイページ - PhotoLex</title>
+<link rel="icon" href="./icon-mark.png" type="image/png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="profile-ui.js"></script>
+<link rel="stylesheet" href="photolex.css">
+</head>
+<body>
+<header>
+<a class="brand" href="index.html" aria-label="PhotoLex ホーム"><img src="assets/photolex-mark.png" alt=""><span>PhotoLex</span></a>
+<h1>マイページ</h1>
+<nav class="app-nav" aria-label="メインナビゲーション">
+<a href="index.html">ホーム</a><a href="mywords.html">自分の単語</a><a href="words.html">単語帳</a><a href="test_setting.html">テスト</a>
+</nav>
+<div class="user-area"><a class="profile-link" href="mypage.html" aria-label="マイページ"><span id="userAvatar" class="user-avatar" data-profile-avatar aria-hidden="true">📘</span><span id="username">読み込み中...</span></a><button id="logoutButton" type="button">ログアウト</button></div>
+</header>
+<main>
+<div class="card">
+<h2>アカウント設定</h2>
+<p class="profile-session-note">ログイン状態は7日間保持され、期限が過ぎると再ログインが必要です。</p>
+<div class="profile-settings">
+<section class="profile-section" aria-labelledby="avatarHeading">
+<h2 id="avatarHeading">アイコン</h2>
+<p>好きなアイコンを選ぶか、写真をアップロードできます。プロフィール画面や各ページのIDの横に表示されます。</p>
+<div id="avatarPreview" class="avatar-preview" aria-label="アイコンのプレビュー"><span>📘</span></div>
+<div id="avatarOptions" class="avatar-options" role="group" aria-label="プロフィールアイコン"></div>
+<div class="avatar-upload-controls">
+<label class="avatar-upload-label" for="avatarUpload">写真を選ぶ<input id="avatarUpload" type="file" accept="image/*" aria-label="プロフィール写真を選択"></label>
+<button id="uploadAvatarButton" type="button" class="secondary" disabled>この写真をアイコンにする</button>
+</div>
+<p id="avatarStatus" class="profile-message" role="status" aria-live="polite"></p>
+</section>
+<section class="profile-section" aria-labelledby="passwordHeading">
+<h2 id="passwordHeading">パスワード変更</h2>
+<p>新しいパスワードは8文字以上で入力してください。</p>
+<form id="passwordForm" class="profile-form">
+<label for="currentPassword">現在のパスワード<input id="currentPassword" type="password" autocomplete="current-password" required></label><label for="newPassword">新しいパスワード<input id="newPassword" type="password" minlength="8" autocomplete="new-password" required></label>
+<label for="confirmPassword">新しいパスワード（確認）<input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" required></label>
+<button type="submit">パスワードを変更</button>
+<p id="passwordStatus" class="profile-message" role="status" aria-live="polite"></p>
+</form>
+</section>
+<section class="profile-section" aria-labelledby="surveyHeading">
+<h2 id="surveyHeading">PhotoLexについて教えてください</h2>
+<p>アンケートフォームを別のページで開きます。回答へのご協力をお願いします。</p>
+<a class="btn survey-link" href="https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=h3b1qjvpzEuaFge29uVJZ2LVlC7ta0pHs8gVwYQEGVFUREI1TklaWDE2NzhENzRMUktGQUs5UzdSUy4u" target="_blank" rel="noopener noreferrer">アンケートに回答する</a>
+</section>
+</div>
+</div>
+</main>
+<script>
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = id => document.getElementById(id);
+const AVATARS = [
+    { icon: "📘", name: "本" }, { icon: "📷", name: "カメラ" },
+    { icon: "🦉", name: "フクロウ" }, { icon: "🐧", name: "ペンギン" },
+    { icon: "🌱", name: "芽" }, { icon: "✨", name: "きらめき" },
+    { icon: "🚀", name: "ロケット" }, { icon: "🎧", name: "ヘッドホン" }
+];
+let currentUser = null;
+let selectedAvatarFile = null;
+let avatarPreviewUrl = null;
+
+async function initializePage() {
+    const user = await PhotoLexProfile.getCurrentUser(supabaseClient);
+    if (!user) {
+        location.href = "login.html";
+        return;
+    }
+    currentUser = user;
+    const { data, error: profileError } = await PhotoLexProfile.getUserInformation(supabaseClient, user);
+    if (profileError) {
+        $("username").textContent = "プロフィールを読み込めません";
+        $("avatarStatus").textContent = "ユーザー情報を取得できませんでした。";
+        return;
+    }
+    $("username").textContent = data.user_name;
+    await PhotoLexProfile.paint(supabaseClient, user);
+    renderAvatarOptions();
+    const existingImage = $("userAvatar").querySelector("img");
+    if (existingImage) updateAvatarPreview(existingImage.src, true);
+    else updateAvatarPreview(PhotoLexProfile.avatarFor(user));
+}
+
+function renderAvatarOptions() {
+    const selected = PhotoLexProfile.avatarFor(currentUser);
+    $("avatarOptions").replaceChildren(...AVATARS.map(({ icon, name }) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "avatar-choice";
+        button.textContent = icon;
+        button.setAttribute("aria-label", name);
+        button.setAttribute("aria-pressed", String(icon === selected && !currentUser.user_metadata?.photolex_avatar_path));
+        button.addEventListener("click", () => saveAvatar(icon));
+        return button;
+    }));
+}
+
+function updateAvatarPreview(source, isImage = false) {
+    const preview = $("avatarPreview");
+    if (isImage) {
+        const image = document.createElement("img");
+        image.src = source;
+        image.alt = "選択した写真のプレビュー";
+        preview.replaceChildren(image);
+    } else {
+        const icon = document.createElement("span");
+        icon.textContent = source;
+        preview.replaceChildren(icon);
+    }
+}
+
+async function saveAvatar(icon) {
+    $("avatarStatus").textContent = "アイコンを保存しています...";
+    const previousPath = currentUser.user_metadata?.photolex_avatar_path;
+    const { data, error } = await supabaseClient.auth.updateUser({
+        data: { photolex_avatar: icon, photolex_avatar_path: null }
+    });
+    if (error) {
+        $("avatarStatus").textContent = "アイコンを保存できませんでした。もう一度お試しください。";
+        return;
+    }
+    currentUser = data.user;
+    if (previousPath) {
+        PhotoLexProfile.invalidateAvatar(previousPath);
+        await supabaseClient.storage.from(PhotoLexProfile.BUCKET).remove([previousPath]);
+    }
+    await PhotoLexProfile.paint(supabaseClient, currentUser);
+    renderAvatarOptions();
+    $("avatarUpload").value = "";
+    $("uploadAvatarButton").disabled = true;
+    selectedAvatarFile = null;
+    if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    avatarPreviewUrl = null;
+    updateAvatarPreview(icon);
+    $("avatarStatus").textContent = "アイコンを変更しました。";
+}
+
+$("avatarUpload").addEventListener("change", () => {
+    const file = $("avatarUpload").files?.[0] || null;
+    selectedAvatarFile = file;
+    $("uploadAvatarButton").disabled = !file;
+    if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    avatarPreviewUrl = file ? URL.createObjectURL(file) : null;
+    if (file) {
+        document.querySelectorAll(".avatar-choice").forEach(button => button.setAttribute("aria-pressed", "false"));
+        updateAvatarPreview(avatarPreviewUrl, true);
+        $("avatarStatus").textContent = "写真を確認してから、アイコンに設定してください。";
+    } else {
+        updateAvatarPreview(PhotoLexProfile.avatarFor(currentUser));
+    }
+});
+
+async function makeAvatarBlob(file) {
+    const image = new Image();
+    const imageUrl = URL.createObjectURL(file);
+    const loaded = new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => reject(new Error("画像を読み込めませんでした。"));
+    });
+    image.src = imageUrl;
+    try {
+        await loaded;
+        const side = Math.min(image.naturalWidth, image.naturalHeight);
+        const canvas = document.createElement("canvas");
+        canvas.width = 256;
+        canvas.height = 256;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("画像を処理できませんでした。");
+        context.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+        return await new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("画像を変換できませんでした。")), "image/jpeg", 0.86));
+    } finally {
+        URL.revokeObjectURL(imageUrl);
+    }
+}
+
+$("uploadAvatarButton").addEventListener("click", async () => {
+    if (!selectedAvatarFile || !currentUser) return;
+    if (selectedAvatarFile.size > 12 * 1024 * 1024) {
+        $("avatarStatus").textContent = "写真は12MB以下のファイルを選んでください。";
+        return;
+    }
+    const button = $("uploadAvatarButton");
+    button.disabled = true;
+    $("avatarStatus").textContent = "写真を保存しています...";
+    const previousPath = currentUser.user_metadata?.photolex_avatar_path;
+    const path = `${currentUser.id}/avatar-${Date.now()}.jpg`;
+    try {
+        const blob = await makeAvatarBlob(selectedAvatarFile);
+        const { error: uploadError } = await supabaseClient.storage.from(PhotoLexProfile.BUCKET).upload(path, blob, {
+            contentType: "image/jpeg",
+            cacheControl: "3600",
+            upsert: true
+        });
+        if (uploadError) throw uploadError;
+        const { data, error } = await supabaseClient.auth.updateUser({
+            data: { photolex_avatar_path: path, photolex_avatar: null }
+        });
+        if (error) throw error;
+        currentUser = data.user;
+        selectedAvatarFile = null;
+        $("avatarUpload").value = "";
+        if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+        avatarPreviewUrl = null;
+        await PhotoLexProfile.paint(supabaseClient, currentUser);
+        renderAvatarOptions();
+        const avatarImage = $("userAvatar").querySelector("img");
+        if (avatarImage) updateAvatarPreview(avatarImage.src, true);
+        $("avatarStatus").textContent = "写真をアイコンに設定しました。";
+    } catch (error) {
+        button.disabled = false;
+        $("avatarStatus").textContent = "写真を保存できませんでした。画像形式とストレージ設定を確認してください。";
+    }
+});
+
+$("passwordForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const currentPassword = $("currentPassword").value;
+    const password = $("newPassword").value;
+    if (password.length < 8) {
+        $("passwordStatus").textContent = "パスワードは8文字以上にしてください。";
+        return;
+    }
+    if (password !== $("confirmPassword").value) {
+        $("passwordStatus").textContent = "確認用パスワードが一致しません。";
+        return;
+    }
+    const button = $("passwordForm").querySelector("button[type=submit]");
+    button.disabled = true;
+    $("passwordStatus").textContent = "現在のパスワードを確認しています...";
+    const { error: verificationError } = await supabaseClient.auth.signInWithPassword({
+        email: currentUser?.email,
+        password: currentPassword
+    });
+    if (verificationError) {
+        button.disabled = false;
+        $("passwordStatus").textContent = "現在のパスワードが正しくありません。";
+        return;
+    }
+    $("passwordStatus").textContent = "新しいパスワードを設定しています...";
+    const { error } = await supabaseClient.auth.updateUser({ password });
+    button.disabled = false;
+    if (error) {
+        $("passwordStatus").textContent = "変更できませんでした。通信状態を確認して、もう一度お試しください。";
+        return;
+    }
+    event.target.reset();
+    $("passwordStatus").textContent = "パスワードを変更しました。";
+});
+
+$("logoutButton").addEventListener("click", async () => {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+        $("passwordStatus").textContent = "ログアウトできませんでした。";
+        return;
+    }
+    location.href = "login.html";
+});
+
+initializePage();
+</script>
+
+</body>
+</html>
