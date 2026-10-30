@@ -1,6 +1,6 @@
 # English-test-app-for-submission
 PhotoLexのコードを提出用にSupabaseのIDやKeyを削除したもの
-提出用ファイル	
+提出用ファイル	\
 Supabase URL	Publishable／anon key\
 `index.html`	336行目	339行目\
 `login.html`	189行目	190行目\
