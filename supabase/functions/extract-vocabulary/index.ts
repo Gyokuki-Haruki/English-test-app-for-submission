@@ -12,28 +12,31 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 });
 
 const vocabularySchema = {
-  type: "OBJECT",
+  type: "object",
   properties: {
     words: {
-      type: "ARRAY",
+      type: "array",
+      maxItems: 100,
       items: {
-        type: "OBJECT",
+        type: "object",
         properties: {
-          English: { type: "STRING" },
-          Japanese: { type: "STRING" },
+          English: { type: "string" },
+          Japanese: { type: "string" },
         },
         required: ["English", "Japanese"],
+        additionalProperties: false,
       },
     },
   },
   required: ["words"],
+  additionalProperties: false,
 };
 
 const prompt = `画像内の英語と、それに対応する日本語の語彙ペアを抽出してください。
 表の各行など、英語と日本語の対応が明確な組だけを返してください。
 熟語や例文は、単独の見出し語として登録しないでください。
 読めない文字は推測で補わず、その組を除外してください。
-指定されたJSON形式に従ってください。`;
+最大100組までにしてください。指定されたJSON形式に従ってください。`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -44,8 +47,8 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!supabaseUrl || !supabaseAnonKey || !geminiApiKey) {
+  const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!supabaseUrl || !supabaseAnonKey || !openaiApiKey) {
     console.error("Required Edge Function environment variable is missing");
     return json({ error: "サーバーの設定が不足しています。管理者にお問い合わせください。" }, 500);
   }
@@ -79,55 +82,61 @@ Deno.serve(async (req) => {
   }
   if (imageBytes.length > 8 * 1024 * 1024) return json({ error: "画像は8MB以下にしてください。" }, 413);
 
-  const model = Deno.env.get("GEMINI_MODEL") || "gemini-3.5-flash-lite";
-  let geminiResponse: Response;
+  const model = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+  let openaiResponse: Response;
   try {
-    geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey },
-        body: JSON.stringify({
-          contents: [{
-            role: "user",
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: mimeType, data: encoded } },
-            ],
-          }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: vocabularySchema,
-            temperature: 0.1,
-          },
-        }),
-        signal: AbortSignal.timeout(90_000),
+    openaiResponse = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openaiApiKey}`,
       },
-    );
+      body: JSON.stringify({
+        model,
+        input: [{
+          role: "user",
+          content: [
+            { type: "input_text", text: prompt },
+            { type: "input_image", image_url: body.imageDataUrl, detail: "high" },
+          ],
+        }],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "vocabulary_extraction",
+            strict: true,
+            schema: vocabularySchema,
+          },
+        },
+        max_output_tokens: 12000,
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
   } catch (error) {
-    console.error("Gemini request failed", error instanceof Error ? error.message : "unknown error");
+    console.error("OpenAI request failed", error instanceof Error ? error.message : "unknown error");
     return json({ error: "AIサービスに接続できませんでした。しばらくしてからお試しください。" }, 502);
   }
 
-  if (!geminiResponse.ok) {
-    console.error("Gemini API returned status", geminiResponse.status);
+  if (!openaiResponse.ok) {
+    console.error("OpenAI API returned status", openaiResponse.status);
     return json({
-      error: geminiResponse.status === 429
+      error: openaiResponse.status === 429
         ? "AIサービスの利用上限に達しました。時間をおいて再度お試しください。"
-        : "写真を読み取れませんでした。画像やGeminiの設定をご確認ください。",
-    }, geminiResponse.status === 429 ? 429 : 502);
+        : "写真を読み取れませんでした。画像やOpenAIの設定をご確認ください。",
+    }, openaiResponse.status === 429 ? 429 : 502);
   }
 
   let result: unknown;
   try {
-    result = await geminiResponse.json();
+    result = await openaiResponse.json();
   } catch {
     return json({ error: "AIから読み取り結果が返りませんでした。" }, 502);
   }
 
   const outputText = (result as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  }).candidates?.[0]?.content?.parts?.find((part) => typeof part.text === "string")?.text;
+    output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+  }).output?.flatMap((item) => item.content ?? [])
+    .find((part) => part.type === "output_text" && typeof part.text === "string")?.text;
   if (typeof outputText !== "string") return json({ error: "AIから読み取り結果が返りませんでした。" }, 502);
 
   try {
