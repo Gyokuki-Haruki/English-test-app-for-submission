@@ -239,15 +239,21 @@ function createLabelOption(value,text,checked){
 
 function updateLabels(){
     const source=$("sourceSelect").value;
-    const labels=source==="myword"?getMyLabels():[source==="leap"?"leap":"tekkyo"];
     const container=$("labelOptions");
     container.replaceChildren();
 
+    if(source!=="myword"){
+        $("labelField").classList.add("hidden");
+        $("labelStatus").textContent="";
+        return;
+    }
+
+    $("labelField").classList.remove("hidden");
+    const labels=getMyLabels();
     const allOption=createLabelOption("__ALL__","すべて",true);
     container.appendChild(allOption);
     labels.forEach(label=>{
-        const text=label===""?"ラベルなし":
-            source==="leap"?"LEAP":source==="tekkyo"?"鉄壁":label;
+        const text=label===""?"ラベルなし":label;
         container.appendChild(createLabelOption(label,text,false));
     });
 
@@ -269,9 +275,7 @@ function updateLabels(){
             updateRangeDefaults();
         }));
 
-    $("labelStatus").textContent=source==="myword"
-        ?"複数のラベルを選べます。"
-        :(source==="leap"?"LEAPの単語から選べます。":"鉄壁の単語から選べます。");
+    $("labelStatus").textContent="複数のラベルを選べます。";
 }
 
 function getAvailableWordCount(){

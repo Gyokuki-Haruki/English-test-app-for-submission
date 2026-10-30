@@ -164,7 +164,7 @@ main{width:94%;max-width:900px;margin:30px auto}.card{background:#fff;padding:25
             <select id="resultLabelSelect"><option value="">ラベルなし</option></select>
             <input id="newResultLabel" type="text" placeholder="新しいラベル名" style="display:none" aria-label="新しいラベル名">
         </label>
-        <div class="label-picker-help">初期状態では間違えた単語を選択しています。チェックで対象を変更できます。</div>
+        <div class="label-picker-help">間違えた単語を選択しています。単語帳の共有ラベルは変更せず、自分の単語に同じ英語があればそのラベルを更新し、なければ選択した単語だけ自分の単語に追加します。</div>
         <button id="applyResultLabelButton" type="button">選択した単語にラベルを適用</button>
     </section>
     <div id="resultLabelStatus" class="status" role="status" aria-live="polite"></div>
@@ -659,7 +659,8 @@ async function applyResultLabel() {
 
         $("resultLabelStatus").textContent =
             `${updatedCount + additions.length}語を「${label || "ラベルなし"}」にしました` +
-            `（既存更新 ${updatedCount}語、新規保存 ${additions.length}語）。`;
+            `（既存更新 ${updatedCount}語、新規保存 ${additions.length}語）。` +
+            (common.length ? "単語帳の共有ラベルは変更していません。" : "");
 
         const known = [
             ...new Set([...loadUserLabels(), ...(label ? [label] : [])])
